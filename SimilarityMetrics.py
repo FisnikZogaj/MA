@@ -2,7 +2,11 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
-G = H = nx.Graph()
+# Vertex Histogramm: Compare Distribution of given Node features of both graphs
+
+G = nx.Graph()
+H = nx.Graph()
+
 G.add_nodes_from([
   ("A", {"color": "blue", "size": 250}),
   ("B", {"color": "yellow", "size": 400}),
@@ -21,7 +25,6 @@ G.add_edges_from([
   ("B", "E"),
   ("E", "D")
 ])
-
 
 H.add_nodes_from([
   ("A", {"color": "blue", "size": 250}),
@@ -56,3 +59,9 @@ nx.draw(G, with_labels=True, node_color=colors, node_size=sizes)
 plt.show()
 nx.draw(H, with_labels=True)
 plt.show()
+
+
+betweenness = nx.betweenness_centrality(G)
+
+for node, centrality in betweenness.items():
+    print("Node:", node, "Centrality:", centrality)
