@@ -8,20 +8,13 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 
+# Source code for torch_geometric.nn.models.autoencoder:
+# https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/nn/models/autoencoder.html#VGAE.kl_loss
+
+# Example from:
 # https://github.com/fork123aniket/Molecule-Graph-Generation/tree/main
 
-class VariationalGCNEncoder(torch.nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super().__init__()
-        self.conv1 = GCNConv(in_channels, 2 * out_channels)
-        self.conv_mu = GCNConv(2 * out_channels, out_channels)
-        self.conv_logstd = GCNConv(2 * out_channels, out_channels)
-
-    def forward(self, x, edge_index):
-        x = self.conv1(x, edge_index).relu()
-        return self.conv_mu(x, edge_index), self.conv_logstd(x, edge_index)
-
-
+# Prepare the Data: *******************************************************
 transform = T.Compose([
     T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
                       split_labels=True, add_negative_train_samples=True)
@@ -41,32 +34,53 @@ for train_data, val_data, test_data in dataset:
     except:
         continue
 
+train_loader = DataLoader(train_data_list, batch_size=2, shuffle=True)
+val_loader = DataLoader(val_data_list, batch_size=2)
+
+# Network architecture: *****************************************************
+class VariationalGCNEncoder(torch.nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.conv1 = GCNConv(in_channels, 2 * out_channels)
+        self.conv_mu = GCNConv(2 * out_channels, out_channels)
+        self.conv_logstd = GCNConv(2 * out_channels, out_channels)
+
+    def forward(self, x, edge_index):
+        x = self.conv1(x, edge_index).relu()
+        return self.conv_mu(x, edge_index), self.conv_logstd(x, edge_index)
+
+
 in_channels, out_channels, lr, n_epochs = dataset.num_features, 16, 1e-2, 5 # num_features = 1
-gen_graphs, threshold, batch_size, add_self_loops = 5, 0.5, 2, True
-model = VGAE(VariationalGCNEncoder(in_channels, out_channels))
+gen_graphs, threshold, add_self_loops = 5, 0.5, True
+# Parameters of VGAE: Encoder (with its parameters) and optional(!) decoder.
+# self.decoder = InnerProductDecoder() if decoder is None else decoder.
+model = VGAE(encoder=VariationalGCNEncoder(in_channels, out_channels))
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-train_loader = DataLoader(train_data_list, batch_size=batch_size, shuffle=True)
-val_loader = DataLoader(val_data_list, batch_size=batch_size)
-
-
 def train():
+    """
+    :return: Avg Train Loss for one epoch
+    called in the train Loop
+    """
     model.train()
     loss_all = 0
 
     for data in train_loader:
         optimizer.zero_grad()
+        # model is an instance of the VGAE class.
+        # The layers and forward method where passed as inputs to VGAE().
         z = model.encode(data.x, data.edge_index)
+        # 1) reconstruction loss: use both postive and negative samples (nodes with and without edges)
+        # since we want to predict both outcomes: edge or no edge
         loss = model.recon_loss(z, data.pos_edge_label_index, data.neg_edge_label_index)
         loss = loss + (1 / data.num_nodes) * model.kl_loss()
         loss.backward()
         loss_all += data.y.size(0) * float(loss) # (variable) batch size * loss
         optimizer.step()
-        avg_loss = loss_all / len(train_loader.dataset)
-        print(avg_loss)
+    avg_loss = loss_all / len(train_loader.dataset)
+    print(avg_loss)
 
     return avg_loss
-
 
 @torch.no_grad()
 def val(loader):
@@ -80,16 +94,21 @@ def val(loader):
         ap_all += data.y.size(0) * float(ap)
     return auc_all / len(val_loader.dataset), ap_all / len(val_loader.dataset)
 
-
 @torch.no_grad()
 def test(loader):
+    """
+    :param loader: test loader
+    :return: List of reconstructed Adj. Matrices.
+    """
     model.eval()
     graph_adj = []
 
     for graph, data in enumerate(loader):
+        # Model encode implicitly calls the forward method and returns its output.
+        # here: return self.conv_mu(x, edge_index), self.conv_logstd(x, edge_index)
         z = model.encode(data.x, data.edge_index)
-        graph_adj.append(model.decoder.forward_all(z))
-        if graph == gen_graphs - 1:
+        graph_adj.append(model.decoder.forward_all(z=z, bool=True)) # append the reconstructed Adj. Matrix
+        if graph == gen_graphs - 1: # Condition if enough graphs are generated.
             break
     return graph_adj
 
@@ -99,7 +118,9 @@ for epoch in range(1, n_epochs + 1):
     auc, ap = val(val_loader)
     print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, AUC: {auc:.4f}, AP: {ap:.4f}')
 
-graphs = np.random.choice(len(test_data_list), gen_graphs, False)
+graphs = np.random.choice(len(test_data_list),
+                          gen_graphs, # = 5 graphs generated
+                          False) # sample 5 indices
 
 test_graph_list = []
 for g_id in graphs:
@@ -108,8 +129,8 @@ for g_id in graphs:
 test_loader = DataLoader(test_graph_list)
 recon_adj = test(test_loader)
 
-for graph in range(gen_graphs):
-    adj_binary = recon_adj[graph] > threshold
+for graph_idx in range(gen_graphs):
+    adj_binary = recon_adj[graph_idx] > threshold
     indices = torch.where(adj_binary)
     G = nx.Graph()
     if not add_self_loops:
@@ -119,3 +140,5 @@ for graph in range(gen_graphs):
         G.add_edges_from(zip(indices[0].tolist(), indices[1].tolist()))
     nx.draw(G)
     plt.show()
+
+
