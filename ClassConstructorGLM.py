@@ -35,8 +35,11 @@ class GLMGraph:
         self.n_edge_permutations = int((self.n_nodes * (self.n_nodes - 1)) / 2)  # all permutations
 
         self.num_features = None
-        self.cat_features = None  # one-hot-encoded community
-        self.community_labels = None
+        self.mixture_comp_labels = None  # (gaussian) cluster-component label
+
+        self.cat_features = None  # one-hot-encoded community matrix
+        self.community_labels = None  # k-mean assigned labels
+
         self.x = None
         self.y = None
         self.long_data = None
@@ -54,20 +57,21 @@ class GLMGraph:
         :param w: mixture weights
         :return: None
 
-        Add numeric features. Only used within the class.
+        Add numeric features. Only used within the class. The X values for each component are sorted (asc. order)
+        So indexing is straightforward (beneficial for Adj. Matrix?)
         """
         assert len(mu) == len(sigma) == len(w), "Different dimensions chosen for mus, sigma, w. "
 
-        gmm = GaussianMixture(n_components=n_c, covariance_type='full')
-        # 'full': each component has its own general covariance matrix.
-        gmm.means_ = np.array(mu)
-        gmm.covariances_ = np.array(sigma)
-        gmm.weights_ = np.array(w)
-        gmm.precisions_cholesky_ = np.linalg.cholesky(np.linalg.inv(covariances))
-
-        data, _ = gmm.sample(self.n_nodes)
+        # Sample from Gaussian-Mixture Model:
+        component_labels = np.sort(
+            np.random.choice(n_c, size=n_nodes, p=w)
+        )
+        data = np.array([np.random.multivariate_normal(mu[label],
+                                                       sigma[label])
+                         for label in component_labels])
 
         self.num_features = data
+        self.mixture_comp_labels = component_labels
 
     def add_community(self, k: int):
         """
@@ -77,10 +81,14 @@ class GLMGraph:
         assert self.num_features is not None, "num_features must be instantiated."
         kmeans = KMeans(n_clusters=k, n_init=1, tol=0.1).fit(self.num_features)
 
-        self.community_labels = kmeans.labels_
-        self.cat_features = pd.get_dummies(kmeans.labels_).to_numpy()
+        self.community_labels = np.array(kmeans.labels_)
+        self.cat_features = pd.get_dummies(kmeans.labels_).to_numpy(dtype=np.float16)
 
     def set_x(self, ignore_cat=True):
+        """
+        Set the feature-matrix for the Graph.
+        :param ignore_cat: Only numeric values are used.
+        """
         if self.cat_features is not None and ignore_cat == False:
             self.x = np.concatenate((self.num_features, self.cat_features), axis=1)
         else:
@@ -88,6 +96,7 @@ class GLMGraph:
 
     def set_y(self, theta: list, eps: float, task="binary", treshhold=0.5):
         """
+        Only relevant for Graph-regression or Node classification tasks.
         :param theta: model params (no intercept)
         :param eps: variance of linear relationship
         :param task: if y should be "binary","multiclass" or "regression"
@@ -111,12 +120,24 @@ class GLMGraph:
         :param intercept: Base connectivity, should center the log_odds around 0
         :param theta: Model params (similar nodes should have higher coefficients)
         :param eps: model variance
-        :param ignore_cat: if True: no explanatory information from communities to edged-connections
+        :param ignore_cat: if True: no explanatory information from communities to edge-connections
         """
         n_rows = self.n_edge_permutations
+        m_num = self.num_features.shape[1]
+        m_cat = 1  # self.community_labels.shape[1] # should always be 1
+
         if self.cat_features is not None and ignore_cat == False:
-            m_cols = self.cat_features.shape[1] + self.num_features.shape[1]
-            # Add == loops ...
+            m_cols = m_num + m_cat
+            long = np.zeros((n_rows, m_cols))  # , dtype=np.float64)
+
+            for i in range(m_num):
+                xi_pairs = list(itertools.combinations(self.x[:, i], 2))
+                xi_delta = [math.sqrt((pair[0] - pair[1]) ** 2) for pair in xi_pairs]  # euclidean distance
+                long[:, i] = xi_delta
+
+            xi_pairs = list(itertools.combinations(self.community_labels, 2))  # self.x[:, ip]
+            xi_same = [float(pair[0] == pair[1]) for pair in xi_pairs]  # euclidean distance
+            long[:, m_num] = xi_same
 
         else:
             m_cols = self.num_features.shape[1]
@@ -127,9 +148,8 @@ class GLMGraph:
                 xi_delta = [math.sqrt((pair[0] - pair[1]) ** 2) for pair in xi_pairs]  # euclidean distance
                 long[:, i] = xi_delta
 
-            colnames = [f"x{i + 1}_delta" for i in range(m_cols)]
-            df_long = pd.DataFrame(long, columns=colnames)
-            df_long.index = list(itertools.combinations(list(range(self.n_nodes)), 2))
+        df_long = pd.DataFrame(long)
+        df_long.index = list(itertools.combinations(list(range(self.n_nodes)), 2))
 
         log_odds = intercept + np.dot(df_long, theta) + np.random.normal(0, eps, n_rows)
         df_long["edge_prob"] = (1 / (1 + np.exp(-log_odds)))  # - 0.001
@@ -220,7 +240,9 @@ class GLMGraph:
         """
         Plot the Graph, with communities/target-class up to 5 categories.
         """
-        target = np.random.randint(0, 1, size=self.n_nodes)
+        # assert self.num_features.shape[1] == 2, "Needs 2 numeric features."
+
+        target = self.mixture_comp_labels
 
         G = self.Nx
         node_idx = list(range(self.n_nodes))
@@ -258,7 +280,7 @@ class GLMGraph:
             self.num_features = None
 
         self.n_edge_permutations = None
-        self.cat_features = None
+        self.cat_features = None  # one-hot-encoded community
 
         self.x = None
         self.y = None
@@ -271,51 +293,51 @@ class GLMGraph:
     def get_graph_statistics(self):
         pass
 
-
 # ************************************************
 # ********* Set Distribution Parameters: *********
 # ************************************************
 # I.e. Scenario:
 
-means = [(-2, 1),
-         (5, 4),
-         (9, 11)]
+means = [(-3, -1),
+         (0, 0),
+         (2, 4)]
 
-covariances = [np.array([[0.5, 0.1],
-                         [0.1, 0.5]]),
+covariances = [np.array([[0.5, 0.3],
+                         [0.3, 0.5]]),
                np.array([[0.8, -0.2],
                          [-0.2, 0.8]]),
-               np.array([[0.3, 0.1],
-                         [0.1, 0.3]])]
+               np.array([[0.6, 0.1],
+                         [0.1, 0.6]])]
 
 weights = [0.3, 0.4, 0.3]
 
-k = 3
+k = 4
+y_theta = [1.5, 3] + [1 for _ in range(k)]
 
-y_theta = [1.5, 3]
-
-c_intercept = 0
-c_theta = [-2.5, -1.5]
-n_nodes = 200
-
+c_intercept = -100
+c_theta = np.array([0, 0, 100000])
+n_nodes = 100
 
 # Set MC-variance:
+
 y_eps = 3
 c_eps = 10
 R = 20  # Number of MC-runs
 
-
-def gen_graph(n_nodes, clear=True):
+def gen_graph(n_nodes, clear=True, th=.5):
     """ Adjusted to workflow order"""
     gglm = GLMGraph(n_nodes)
 
     gglm.add_num_features(n_c=3, mu=means, sigma=covariances, w=weights)
     gglm.add_community(k)
-    gglm.set_x(ignore_cat=True)
+    gglm.set_x(ignore_cat=False)
+
     gglm.set_y(y_theta, y_eps, task="binary")
 
-    gglm.set_connections(c_intercept, c_theta, c_eps, ignore_cat=True)
-    th = np.random.rand(gglm.n_edge_permutations)  # treshhold
+    gglm.set_connections(c_intercept, c_theta, c_eps, ignore_cat=False)
+    if not th:
+        th = np.random.rand(gglm.n_edge_permutations)  # treshhold
+
     gglm.set_Nx(th)
 
     gglm.sample_train_edge_labels()
@@ -326,11 +348,9 @@ def gen_graph(n_nodes, clear=True):
 
     return gglm
 
-
-sampG = gen_graph(200, False)
+sampG = gen_graph(n_nodes, False)
 sampG.plot_2d("An exemplary Graph")
 sampG.plot_connection_details()
-
 
 # ************************************************
 # ********* train-test split: ********************
