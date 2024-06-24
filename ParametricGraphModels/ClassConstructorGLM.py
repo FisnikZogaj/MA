@@ -431,7 +431,7 @@ model = VGAE(encoder=VGCNEncoder2(in_channels, out_channels, dr=.33))
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
 experiment_name = f"ex{1}"
-log_dir = os.path.join("experiments", experiment_name)
+log_dir = os.path.join("../experiments", experiment_name)
 writer = SummaryWriter(log_dir)
 
 hparams = {
