@@ -24,6 +24,10 @@ class GLMGraph:
     pos_edge_label_index: A subset of edge index (typically half)
     neg_edge_label_index: A subset of all non-existing edges (same length as pos_edge_label_index)
     No Edge Attributes considered.
+
+    Synthetic Graphs for EdgeCNN
+    The main objective of using EdgeConv and similar GNN techniques on point clouds is to learn meaningful
+     feature representations that capture spatial relationships and local structures within the data.
     """
 
     def __init__(self, n_nodes: int):

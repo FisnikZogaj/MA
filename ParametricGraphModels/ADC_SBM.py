@@ -22,7 +22,7 @@ class Adc_sbm:
     def __init__(self, community_sizes: list, B: np.array):
         """
         :param community_sizes: [70, 50, 100]
-        :param B:
+        :param B: Connection Prob Matrix
         """
         self.nx = None
         self.edge_index = None
@@ -45,9 +45,54 @@ class Adc_sbm:
         self.x_tsne = None
         self.y = None
 
+    # ------------------------ Instantiate Graph Object -------------------------
+
+    def gen_graph(self):
+        """
+        Generate either DC-SBM or SBM based on availability of degree correction.
+        """
+        if self.dc is not None:
+            dcsbm_graph = sbm(self.community_sizes, self.B, dc=self.dc, loops=False)
+            self.nx = nx.from_numpy_array(dcsbm_graph)
+        else:
+            sbm_graph = sbm(self.community_sizes, self.B, loops=False)
+            self.nx = nx.from_numpy_array(sbm_graph)
+
+        edge_list = list(self.nx.edges())
+        self.edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()
+        self.degrees = np.array([self.nx.degree(n) for n in self.nx.nodes()])
+
+
+    def correct_degree(self, alpha: float, beta: float, lmbd: float = .5, distribution: str = "exp"):
+        """
+        :param alpha: lower (or shape parameter)
+        :param beta: upper (or shape parameter)
+        :param lmbd: exponential coefficient for shape of
+        :param distribution:
+        :return:
+        """
+        # theta with a distribution between 0 and 1
+        assert distribution in ["exp", "beta"], "Distribution must be in [exp, beta]"
+
+        if distribution == "exp":
+            degree_corrections = np.random.uniform(alpha, beta, self.n_nodes) ** (-1 / lmbd)
+
+        if distribution == "beta":
+            degree_corrections = np.random.beta(alpha, beta, size=self.n_nodes)
+
+            # Block-Wise degree correction:
+        for label in np.unique(self.community_labels):  # one label per block
+            mask = (self.community_labels == label)
+            degree_corrections[mask] = np.sort(degree_corrections[mask])[::-1]  # sort in increasing order
+            comm_sum = np.sum(degree_corrections[mask])
+            degree_corrections[mask] = degree_corrections[mask] / comm_sum  # Block-wise-normalize
+
+        self.dc = degree_corrections
+
+    # ------------------ Set Node features and Targets ------------------------
+
     def set_x(self, n_c: int, mu: list, sigma: list, w: list):
         """
-        if stochastic = True -> w must be list of integers, corresponding to the number of nodes per community
         :param stochastic: fixed or stochastic cluster components
         :param n_c: number of cluster components
         :param mu: list of tuples corresponding to
@@ -83,47 +128,6 @@ class Adc_sbm:
     def reduce_dim_x(self, rs=26):
         tsne = TSNE(n_components=2, random_state=rs)
         self.x_tsne = tsne.fit_transform(self.x)
-
-    def correct_degree(self, alpha: float, beta: float, lmbd: float = .5, distribution: str = "exp"):
-        """
-        :param alpha: lower (or shape parameter)
-        :param beta: upper (or shape parameter)
-        :param lmbd: exponential coefficient for shape of
-        :param distribution:
-        :return:
-        """
-        # theta with a distribution between 0 and 1
-        assert distribution in ["exp", "beta"], "Distribution must be in [exp, beta]"
-
-        if distribution == "exp":
-            degree_corrections = np.random.uniform(alpha, beta, self.n_nodes) ** (-1 / lmbd)
-
-        if distribution == "beta":
-            degree_corrections = np.random.beta(alpha, beta, size=self.n_nodes)
-
-            # Block-Wise degree correction:
-        for label in np.unique(self.community_labels):  # one label per block
-            mask = (self.community_labels == label)
-            degree_corrections[mask] = np.sort(degree_corrections[mask])[::-1]  # sort in increasing order
-            comm_sum = np.sum(degree_corrections[mask])
-            degree_corrections[mask] = degree_corrections[mask] / comm_sum  # Block-wise-normalize
-
-        self.dc = degree_corrections
-
-    def gen_graph(self):
-        """
-        Generate either DC-SBM or SBM based on availability of degree correction.
-        """
-        if self.dc is not None:
-            dcsbm_graph = sbm(self.community_sizes, self.B, dc=self.dc, loops=False)
-            self.nx = nx.from_numpy_array(dcsbm_graph)
-        else:
-            sbm_graph = sbm(self.community_sizes, self.B, loops=False)
-            self.nx = nx.from_numpy_array(sbm_graph)
-
-        edge_list = list(self.nx.edges())
-        self.edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()
-        self.degrees = np.array([self.nx.degree(n) for n in self.nx.nodes()])
 
     def set_y(self, task: str, weights: np.array, distribution: str = "normal", n_classes: int = 3):
         """
@@ -171,6 +175,8 @@ class Adc_sbm:
             probabilities = softmax(logits, axis=1)
             self.y = np.argmax(probabilities, axis=1) + 1  # shift all by one (not important really)
 
+    # -------------------- Prepare Data Objects for Training -------------------------------
+
     def sample_train_edge_labels(self, size: int = None):
         """
         :param size: sample size of pos and neg edges
@@ -211,7 +217,9 @@ class Adc_sbm:
 
         self.DataObject = data
 
-    def plot_data(self, alpha=.9):
+    # ----------------- Plotting Methods -----------------------
+
+    def plot_features(self, alpha=.9):
         assert self.x is not None and self.community_labels is not None, "No data yet created"
         assert 2 <= self.x.shape[1], "No plot possible"
 
@@ -244,13 +252,11 @@ class Adc_sbm:
                 edge_color='grey', font_color='black', width=width, alpha=alpha)
         plt.show()
 
-        # ----------- Density of edges -----------------
-
+    def plot_edge_density(self, alpha=.9, width=.1):
         density = gaussian_kde(self.degrees)
         x = np.linspace(min(self.degrees), max(self.degrees), 1000)
         density_values = density(x)
 
-        # Plot the density plot
         plt.figure(figsize=(8, 6))
         plt.plot(x, density_values, color='blue')
         plt.fill_between(x, density_values, alpha=alpha)
@@ -261,7 +267,12 @@ class Adc_sbm:
         plt.show()
 
     def characterise(self, group_by: str = "Community", metric: str = "gini", colors: list = None):
-
+        """
+        :param group_by: ["Community", "Cluster"]
+        :param metric: gini or enrtropy
+        :param colors: colors for plotting
+        Plot Grouped Distribution for Target Y
+        """
         assert group_by in ["Community", "Cluster"], "group_by cluster or community"
         cdict = {"Community": self.community_labels, "Cluster": self.cluster_labels}
 
