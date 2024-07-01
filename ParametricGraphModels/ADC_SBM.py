@@ -1,11 +1,7 @@
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-import networkit as nk
-from pygsp import graphs as gsp_graphs
-import seaborn as sns
 import itertools
-import random
 from scipy.stats import gaussian_kde
 import torch
 from torch_geometric.data import Data
@@ -16,52 +12,46 @@ import seaborn as sns
 from sklearn.manifold import TSNE
 from graspy.simulations import sbm
 
+import pickle
+import os
+
 
 class Adc_sbm:
 
     def __init__(self, community_sizes: list, B: np.array):
         """
-        :param community_sizes: [70, 50, 100]
+        :param community_sizes: E.g.: [70, 50, 100]
         :param B: Connection Prob Matrix
         """
-        self.nx = None
-        self.edge_index = None
-        self.pos_edge_label_index = None
-        self.neg_edge_label_index = None
-        self.degrees = None
-        self.task = None
+        self.nx = None # Here the NetworkX object is stored
+        self.edge_index = None # edge indices [[tensor],[tensor]]
 
-        self.community_sizes = community_sizes
+        self.pos_edge_label_index = None # used for link prediction
+        self.neg_edge_label_index = None # used for link prediction
+
+        self.train_mask = None
+        self.test_mask = None
+        self.val_mask = None
+
+        self.degrees = None # degree of each node
+        self.task = None # string indicator
+
+        self.community_sizes = community_sizes # list of sizes
         self.n_nodes = sum(community_sizes)
 
-        self.community_labels = np.concatenate([np.full(n, i)
+        self.community_labels = np.concatenate([np.full(n, i) # labels the community
                                                 for i, n in enumerate(community_sizes)])
-        self.cluster_labels = None
+        self.cluster_labels = None # labels the numeric feature cluster (gaussian component)
 
-        self.B = B
+        self.B = B # Block prob matrix
 
         self.dc = None
         self.x = None
         self.x_tsne = None
         self.y = None
+        self.name = None
 
     # ------------------------ Instantiate Graph Object -------------------------
-
-    def gen_graph(self):
-        """
-        Generate either DC-SBM or SBM based on availability of degree correction.
-        """
-        if self.dc is not None:
-            dcsbm_graph = sbm(self.community_sizes, self.B, dc=self.dc, loops=False)
-            self.nx = nx.from_numpy_array(dcsbm_graph)
-        else:
-            sbm_graph = sbm(self.community_sizes, self.B, loops=False)
-            self.nx = nx.from_numpy_array(sbm_graph)
-
-        edge_list = list(self.nx.edges())
-        self.edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()
-        self.degrees = np.array([self.nx.degree(n) for n in self.nx.nodes()])
-
 
     def correct_degree(self, alpha: float, beta: float, lmbd: float = .5, distribution: str = "exp"):
         """
@@ -89,9 +79,25 @@ class Adc_sbm:
 
         self.dc = degree_corrections
 
+
+    def gen_graph(self):
+        """
+        Generate either DC-SBM or SBM based on availability of degree correction.
+        """
+        if self.dc is not None:
+            dcsbm_graph = sbm(self.community_sizes, self.B, dc=self.dc, loops=False)
+            self.nx = nx.from_numpy_array(dcsbm_graph)
+        else:
+            sbm_graph = sbm(self.community_sizes, self.B, loops=False)
+            self.nx = nx.from_numpy_array(sbm_graph)
+
+        edge_list = list(self.nx.edges())
+        self.edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()
+        self.degrees = np.array([self.nx.degree(n) for n in self.nx.nodes()])
+
     # ------------------ Set Node features and Targets ------------------------
 
-    def set_x(self, n_c: int, mu: list, sigma: list, w: list):
+    def set_x(self, n_c: int, mu: list, sigma: list, w: any):
         """
         :param stochastic: fixed or stochastic cluster components
         :param n_c: number of cluster components
@@ -129,17 +135,17 @@ class Adc_sbm:
         tsne = TSNE(n_components=2, random_state=rs)
         self.x_tsne = tsne.fit_transform(self.x)
 
-    def set_y(self, task: str, weights: np.array, distribution: str = "normal", n_classes: int = 3):
+    def set_y(self, task: str, weights: np.array, distribution = None):
         """
         :param task: ["regression","binary","multiclass"]
-        :param weights: array of numbers specifying the importance of each features
+        :param weights: array of numbers specifying the importance of each feature
         (order is relevant to match the feature matrix!)
         A vector if not multiclass, else a matrix with m_rows = number of classes, n_col = number of features)
         E.g.: weights = np.array([0.5, 1.0, 2.0, 2.0])
         :param distribution: Distribution, from which to draw the parameters from
         :return: targets
         """
-
+        # Assertions are still a bit messy, but they work
         if task == "multiclass":
             assert weights.shape[0] > 1, "Not enough classes"
         elif task == "regression" or task == "binary":
@@ -161,7 +167,9 @@ class Adc_sbm:
         if distribution == "normal":
             beta = np.random.normal(size=weights.shape) * weights
         if distribution == "uniform":
-            beta = np.random.uniform(size=weights.shape) * weights
+            beta = np.random.uniform(low=0, high=1, size=weights.shape) * weights
+        if distribution == None:
+            beta = np.ones(weights.shape) * weights
 
         if task == "regression":
             self.y = np.dot(feat_mat, beta)
@@ -173,7 +181,7 @@ class Adc_sbm:
             # assert
             logits = np.dot(feat_mat, beta.T)
             probabilities = softmax(logits, axis=1)
-            self.y = np.argmax(probabilities, axis=1) + 1  # shift all by one (not important really)
+            self.y = np.argmax(probabilities, axis=1)
 
     # -------------------- Prepare Data Objects for Training -------------------------------
 
@@ -208,10 +216,37 @@ class Adc_sbm:
             samp_space[:, sidx_neg]
         )
 
+
+    def split_data(self, splitweights:list, method:str="runif"):
+        """
+        Create a boolean tensor, to index the nodes for the different sets.
+        :param splitweights: [.7,.2,.1] -> 70% train, 20% test and 10% val
+        :param method: in ["runif", ...]
+        """
+        assert np.abs(np.sum(splitweights) - 1) < 1e-8, "Weights dont sum up to 1."
+
+        if method == "runif":
+            mv = np.round(self.n_nodes * np.array(splitweights))
+            if sum(mv) != self.n_nodes:
+                mv[0] += (self.n_nodes-sum(mv))
+            # indexing length must match
+            rv = np.random.permutation(
+                np.concatenate((np.repeat('train', mv[0]),
+                                np.repeat('test', mv[1]),
+                                np.repeat('train', mv[2]))
+                               )
+            )
+            self.train_mask = torch.tensor(rv == 'train')
+            self.test_mask = torch.tensor(rv == 'test')
+            self.val_mask = torch.tensor(rv == 'val')
+
     def set_Data_object(self):
-        data = Data(x=torch.tensor(self.x, dtype=torch.float64),
+        data = Data(x=torch.tensor(self.x, dtype=torch.float32),
                     edge_index=self.edge_index,  # allready a tensor
-                    y=torch.tensor(self.y, dtype=torch.float64),
+                    y=torch.tensor(self.y, dtype=torch.int64),
+                    train_mask=self.train_mask,
+                    test_mask=self.test_mask,
+                    val_mask=self.val_mask,
                     pos_edge_label_index=self.pos_edge_label_index,  # allready a tensor
                     neg_edge_label_index=self.neg_edge_label_index)  # allready a tensor
 
@@ -266,6 +301,7 @@ class Adc_sbm:
         plt.grid(True)
         plt.show()
 
+
     def characterise(self, group_by: str = "Community", metric: str = "gini", colors: list = None):
         """
         :param group_by: ["Community", "Cluster"]
@@ -273,8 +309,8 @@ class Adc_sbm:
         :param colors: colors for plotting
         Plot Grouped Distribution for Target Y
         """
-        assert group_by in ["Community", "Cluster"], "group_by cluster or community"
-        cdict = {"Community": self.community_labels, "Cluster": self.cluster_labels}
+        assert group_by in ["Community", "Feat.Cluster"], "group_by cluster or community"
+        cdict = {"Community": self.community_labels, "Feat.Cluster": self.cluster_labels}
 
         df = pd.DataFrame({group_by: cdict[group_by], 'Y': self.y})
 
@@ -284,9 +320,9 @@ class Adc_sbm:
 
             grouped_counts.plot(kind='bar', figsize=(10, 6))
             plt.xlabel(group_by)
-            plt.ylabel('Class Frequency')
+            plt.ylabel('Grouped Frequency: Target')
             plt.title(' ')
-            plt.legend(title=group_by)
+            plt.legend(title="Target Label")
             plt.show()
 
             if metric == "gini":
@@ -340,18 +376,43 @@ def setB(m: int, b_range: tuple, w_range: tuple, rs: int = False):
 
     return B
 
+def from_config(config:dict):
+    """
+    Generate entire graph from config dictionary
+    :param config: a dictionary with specified args  
+    """
+    community_sizes = config["community_sizes"]
+    n = sum(community_sizes)  
+    b_communities = len(community_sizes)
+    m_features = config["m_features"]
+    k_clusters = config["k_clusters"]
+    alpha, beta, lmbd = config["alpha"], config["beta"], config["lmbd"]
+    br, wr = config["between_prob_range"], config["within_prob_range"]
+
+    n_targets = config["n_targets"]  # number of target classes; fixed
+
+
 
 if __name__ == "__main__":
-    community_sizes = [90, 130, 200, 60]
+
+    # 1) ----------------- Set Params -----------------
+    community_sizes = [90, 130, 200, 60] # 4 communities; fixed
     n = sum(community_sizes)  # number of nodes (observations)
     b_communities = len(community_sizes)  # number of communities
-    m_features = 6  # number of numeric features
-    k_clusters = 6  # number of feature clusters
+    m_features = 6  # number of numeric features; fixed
+    k_clusters = 6  # number of feature clusters; Overlap Scenario (over, under, match) 3,5,4
+    alpha, beta, lmbd = 2, 20, .5 # degree_correction params; fixed
+    br, wr = (.15, .2), (.4, .5) # assortative and dis-assortative
 
-    B = setB(m=b_communities, b_range=(.5, .75), w_range=(0, .5))  # get Connection Matrix
-
+    # 2) ------- Instantiate Class Object (Note: No graspy calles yet!) ---------
+    B = setB(m=b_communities, b_range=br, w_range=wr)  # get Connection Matrix
     g = Adc_sbm(community_sizes=community_sizes, B=B)  # instantiate class
 
+    # 3) ----------------- Generate the actual Graph -----------------
+    g.correct_degree(alpha=alpha, beta=beta, lmbd=lmbd, distribution="exp")
+    g.gen_graph()
+
+    # 4) ----------------- Generate Node Features -----------------
     # Generate "k" centroids with "m" features
     centroids = np.random.multivariate_normal(np.repeat(0, m_features),  # mu
                                          setB(m_features,
@@ -367,8 +428,20 @@ if __name__ == "__main__":
             w=np.random.dirichlet(np.ones(k_clusters), size=1).flatten(),
             # w=[220, 200, 60]
             )
+    # 4) ----------------- Generate Targets -----------------
+    ny = 5  # number of target classes; fixed
+    nf = m_features + 1 + k_clusters  # number of features
+    # omega = np.repeat(np.random.exponential(size=nf, scale=.5),ny).reshape(ny,-1)
+    omega = np.repeat(np.random.uniform(size=nf, low=.5, high=.75), ny).reshape(ny, -1)# ;fixed
+    # omega = np.random.exponential(0.5,nf)
 
-    g.correct_degree(alpha=2, beta=20, lmbd=.5, distribution="exp")
-    g.gen_graph()
-    # g.plot_graph(.9,.02)
-    # g.reduce_dim_x()
+    g.set_y(task="multiclass", weights=omega, distribution="normal")
+    g.split_data(splitweights=[.7,.2,.1], method="runif")
+    g.set_Data_object()
+    print(g.DataObject)
+
+    #g.characterise(group_by="Community", # Feat.Cluster
+     #              colors=sns.color_palette('husl', k_clusters))
+
+    with open(r'C:\Users\zogaj\PycharmProjects\MA\SyntheticGraphs\g1.pkl', 'wb') as f:
+        pickle.dump(g, f)
