@@ -258,7 +258,7 @@ class GLMGraph:
             G.nodes[i]['target'] = target[i]
 
         pos = {node: data['pos'] for node, data in G.nodes(data=True)}
-        color_map = {0: 'purple', 1: 'darkgreen', 2: 'gold', 3: "black", 4: "silver"}
+        color_map = {0: 'purple', 1: 'darkgreen', 2: 'gold', 3: "black", 4: "darkred"}
         shape_map = {0: 'x', 1: 'o', 2: "d", 3: "D", 4: "<"}  #
 
         plt.figure(figsize=(10, 10))

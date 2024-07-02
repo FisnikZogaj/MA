@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch_geometric.utils import to_networkx
 
 
-class GCN(torch.nn.Module):
+class ThreeLayerGCN(torch.nn.Module):
     def __init__(self, hidden_channels, hidden_channels2, input_channels, output_channels):
         super().__init__()
         torch.manual_seed(26)
