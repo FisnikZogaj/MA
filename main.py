@@ -7,22 +7,19 @@ import torch_geometric
 from datetime import datetime
 
 # Custom Modules
-from ParametricGraphModels.ADC_SBM import ADC_SBM, setB, from_config
+from ParametricGraphModels.ADC_SBM import ADC_SBM, getB, from_config
 from config import note_config, MultiClassClassification as MCC
 
 # 1) Generate the Graph with a specified Configuration
-graph_params = MCC.overlap_assort
-G = from_config(graph_params)
+graph_params = MCC.overlap_assort_seperated
+g = from_config(graph_params)
+note_config(graph_params, "test")
+g.rich_plot_graph()
 
+input("Preceed with this graph ?")
 
-note_config(graph_params)
-
-
-with open(r'C:\Users\zogaj\PycharmProjects\MA\SyntheticGraphs\g1.pkl', 'rb') as f:
-    g = pickle.load(f)
-
-
-
+#with open(r'C:\Users\zogaj\PycharmProjects\MA\SyntheticGraphs\g1.pkl', 'rb') as f:
+ #   g = pickle.load(f)
 
 num_targets = len(np.unique(g.y))
 num_input_features = g.x.shape[1]
