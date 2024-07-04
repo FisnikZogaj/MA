@@ -19,13 +19,14 @@ class ThreeLayerGCN(torch.nn.Module):
         self.conv2 = GCNConv(hidden_channels, hidden_channels2)
         self.conv3 = GCNConv(hidden_channels2, output_channels)
 
-    def forward(self, x, edge_index):
+    def forward(self, x, edge_index, drop=0, drop2=0):
         x = self.conv1(x, edge_index)
         x = x.relu()
-        x = F.dropout(x, p=0.5, training=self.training)
+        x = F.dropout(x, p=drop, training=self.training)
 
         x = self.conv2(x, edge_index)
         x = x.relu()
+        x = F.dropout(x, p=drop2, training=self.training)
 
         x = self.conv3(x, edge_index)
 

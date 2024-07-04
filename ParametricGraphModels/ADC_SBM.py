@@ -168,10 +168,10 @@ class ADC_SBM:
                                 self.degrees.reshape(-1, 1)), axis=1)
             )
 
-        if feature_info == "cluster": # use cluster dummies
+        elif feature_info == "cluster": # use cluster dummies
             x_continuous = np.concatenate(
-                scaler.fit_transform(self.degrees.reshape(-1, 1)),  # it's not continuous anymore, but it's just a name
-                pd.get_dummies(self.cluster_labels).to_numpy(dtype=np.float16)
+                (scaler.fit_transform(self.degrees.reshape(-1, 1)),  # it's not continuous anymore, but it's just a name
+                pd.get_dummies(self.cluster_labels).to_numpy(dtype=np.float16)), axis=1
             )
         else:
             raise ValueError("feature_info must either be 'number' or 'cluster'.")
@@ -246,26 +246,28 @@ class ADC_SBM:
             mv = np.round(self.n_nodes * np.array(splitweights))
             if sum(mv) != self.n_nodes:
                 mv[0] += (self.n_nodes-sum(mv))
+
             # indexing length must match
             rv = np.random.permutation(
                 np.concatenate((np.repeat('train', mv[0]),
                                 np.repeat('test', mv[1]),
-                                np.repeat('train', mv[2]))
+                                np.repeat('val', mv[2]))
                                )
             )
+
             self.train_mask = torch.tensor(rv == 'train')
             self.test_mask = torch.tensor(rv == 'test')
             self.val_mask = torch.tensor(rv == 'val')
 
     def set_Data_object(self):
         data = Data(x=torch.tensor(self.x, dtype=torch.float32),
-                    edge_index=self.edge_index,  # allready a tensor
+                    edge_index=self.edge_index,  # already a tensor
                     y=torch.tensor(self.y, dtype=torch.int64),
                     train_mask=self.train_mask,
                     test_mask=self.test_mask,
                     val_mask=self.val_mask,
-                    pos_edge_label_index=self.pos_edge_label_index,  # allready a tensor
-                    neg_edge_label_index=self.neg_edge_label_index)  # allready a tensor
+                    pos_edge_label_index=self.pos_edge_label_index,  # already a tensor
+                    neg_edge_label_index=self.neg_edge_label_index)  # already a tensor
 
         self.DataObject = data
 
@@ -464,10 +466,10 @@ def getW(m_targets, n_communities, j_features, k_clusters, feature_info="number"
 
     if feature_info == "number":
         x_betas = np.random.normal(loc=w_x, scale=1, size=(j_features, m_targets)).T
-    if feature_info == "cluster":
+    elif feature_info == "cluster":
         x_betas = np.power(np.random.exponential(w_x, (k_clusters, m_targets)).T, exponent)
     else:
-        raise ValueError("feature_info must either be 'number' or 'cluster'.")
+        raise ValueError(f"feature_info must either be 'number' or 'cluster'. '{feature_info}' provided")
 
     community_betas = np.power(np.random.exponential(w_com, (n_communities, m_targets)).T, exponent)
 
@@ -479,8 +481,8 @@ def from_config(config:dict, rs = 26):
     :param config: a dictionary with specified args
     :param rs: random_state
     """
-    # 0) ------- Set Random State and functions--------
-    global getB, getW
+    # 0) --------- Set Random State -------------------
+
     np.random.seed(rs)
     random.seed(rs)
     torch.manual_seed(rs)
@@ -491,7 +493,8 @@ def from_config(config:dict, rs = 26):
     b_communities = len(community_sizes)
 
     m_features = config["m_features"]
-    k_clusters = config["k_clusters"]
+    cluster_sizes = config["cluster_sizes"]
+    k_clusters = len(config["cluster_sizes"])
     alpha, beta, lmbd = config["alpha"], config["beta"], config["lmbd"] #fixed anyway
 
     b_com_r, w_com_r = config["between_com_prob_range"], config["within_com_prob_range"]
@@ -501,7 +504,6 @@ def from_config(config:dict, rs = 26):
 
     centroid_variance_range = config["centroid_variance_range"]
     centroid_covariance_range = config["centroid_covariance_range"]
-    cluster_sizes = config["cluster_sizes"]
 
     degree_importance = config["degree_importance"]
     x_importance = config["x_importance"]
@@ -535,12 +537,17 @@ def from_config(config:dict, rs = 26):
                  w_x=x_importance, w_com=community_importance, exponent=1)
 
     g.set_y(task=config["task"], weights=omega, feature_info="number", eps=config["model_error"])
+
+    g.split_data(config["splitweights"]) # Data must be split, before creating the object !
     g.set_Data_object()
 
     return g
 
 
 if __name__ == "__main__":
+    from config import MultiClassClassification
+
+    #from_config(MultiClassClassification.overlap_assort_seperated)
 
     # 1) ----------------- Set Params -----------------
     community_sizes = [90, 140, 210, 160] # 4 communities; fixed
@@ -584,8 +591,12 @@ if __name__ == "__main__":
     ny = 5  # number of target classes; fixed
     nf = m_features + 1 + b_communities # number of relevant features (community and degree considered!)
 
-    omega = getW(m_targets=ny,n_communities=b_communities,j_features=m_features,
-                 k_clusters=k_clusters,feature_info="number",
-                 w_degree=0, w_x= 2, w_com=1, exponent=1)
-    g.set_y(task="multiclass", weights=omega, distribution="normal", eps=.5)
+    omega = getW(m_targets=ny, n_communities=b_communities, j_features=m_features,
+                 k_clusters=k_clusters, feature_info="cluster",
+                 w_degree=0, w_x=2, w_com=1, exponent=1)
+
+    g.set_y(task="multiclass", weights=omega, feature_info="cluster", eps=.5)
+    g.split_data([.7,.2,.1])
+    g.set_Data_object()
+    #print(g.DataObject.train_mask)
 
