@@ -407,6 +407,7 @@ class ADC_SBM:
                     )
 
        # ------------------ for numeric targets -------------------
+       # deprecated
 
         #else:
          #   unique_groups = df[group_by].unique()
@@ -543,11 +544,39 @@ def from_config(config:dict, rs = 26):
 
     return g
 
+def synthetic_split(config: dict, splitweights: any):
+    """
+    Generate three different graphs with same configs but different sizes for
+    a synthetic tran, test, validation split.
+
+    rename nodes, to handle splitting?
+    :param config:
+    :param splitweights:
+    :return:
+    """
+    rs = 26
+    initial_com_size = config["community_sizes"]
+    initial_clust_size = config["cluster_sizes"]
+
+    for i, w in enumerate(splitweights):
+        config["community_sizes"] = np.array(config["community_sizes"]) * w
+        config["cluster_sizes"] = np.array(config["cluster_sizes"]) * w
+
+        if sum(config["community_sizes"]) != sum(config["cluster_sizes"]):
+            config["community_sizes"][0] += (sum(config["cluster_sizes"]) - sum(config["community_sizes"]))
+
+        Graph = from_config(config, rs=rs+i)
+
+        config["community_sizes"] = initial_com_size
+        config["cluster_sizes"] = initial_clust_size
+
 
 if __name__ == "__main__":
     from config import MultiClassClassification
 
-    #from_config(MultiClassClassification.overlap_assort_seperated)
+    from_config(MultiClassClassification.perfect_graph)
+    synthetic_split(MultiClassClassification.perfect_graph, [.7,.2,.1])
+
 
     # 1) ----------------- Set Params -----------------
     community_sizes = [90, 140, 210, 160] # 4 communities; fixed
