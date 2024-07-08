@@ -50,6 +50,7 @@ class ADC_SBM:
         self.x = None
         self.x_tsne = None
         self.y = None
+        self.num_y_labels = None
         self.name = None
 
     # ------------------------ Instantiate Graph Object -------------------------
@@ -192,6 +193,7 @@ class ADC_SBM:
             error = np.random.normal(0, eps, self.n_nodes)
             self.y = ((1 / (1 + np.exp(-np.dot(feat_mat, beta))) + error)
                       > np.random.uniform(size=self.n_nodes))
+            self.num_y_labels = 2
 
         if task == "multiclass":
             # assert
@@ -199,6 +201,7 @@ class ADC_SBM:
             logits = np.dot(feat_mat, beta.T) + error
             probabilities = softmax(logits, axis=1)
             self.y = np.argmax(probabilities, axis=1)
+            self.num_y_labels = probabilities.shape[1]
 
     # -------------------- Prepare Data Objects for Training -------------------------------
 
@@ -574,8 +577,8 @@ def synthetic_split(config: dict, splitweights: any):
 if __name__ == "__main__":
     from config import MultiClassClassification
 
-    from_config(MultiClassClassification.perfect_graph)
-    synthetic_split(MultiClassClassification.perfect_graph, [.7,.2,.1])
+    #from_config(MultiClassClassification.perfect_graph)
+    #synthetic_split(MultiClassClassification.perfect_graph, [.7,.2,.1])
 
 
     # 1) ----------------- Set Params -----------------
