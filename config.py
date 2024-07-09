@@ -1,9 +1,9 @@
 from datetime import datetime
 import os
 import numpy as np
-class MultiClassClassification:
+class Scenarios:
 
-    perfect_graph = {
+    perfect = {
 
         "task": "multiclass",
 
@@ -35,7 +35,7 @@ class MultiClassClassification:
 
     }
 
-    noise_graph = {
+    noise = {
 
             "task": "multiclass",
 
@@ -66,3 +66,18 @@ class MultiClassClassification:
             "splitweights": [.7, .2, .1]
 
         }
+
+    def __init__(self):
+        self._elements = [self.perfect, self.noise]
+        self._index = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._index < len(self._elements):
+            result = self._elements[self._index]
+            self._index += 1
+            return result
+        else:
+            raise StopIteration

@@ -1,52 +1,56 @@
 import subprocess
-import torch
-from torch_geometric.data import Data
-import os
-import pickle
-# Running main.py will generate ...
+import time
+import multiprocessing as mp
+from config import Scenarios
 
-
-#base = r"C:\Users\zogaj\PycharmProjects\MA\SyntheticGraphs"
-#os.makedirs(base, exist_ok=True)
-#graph_path = os.path.join(base, "graph.pkl")
-#with open(graph_path, 'wb') as file:
-#    pickle.dump(graph, file)
-
-def save_data_object(data_object, file_path):
-    torch.save(data_object, file_path)
-
-# Create your DataObject (example data)
-num_nodes = 100
-num_features = 16
-x = torch.randn((num_nodes, num_features))
-edge_index = torch.randint(0, num_nodes, (2, 200))
-y = torch.randint(0, 3, (num_nodes,))
-data_object = Data(x=x, edge_index=edge_index, y=y)
-
-# Save the DataObject to a file
-data_path = 'data_object.pt'
-save_data_object(data_object, data_path)
-
-# Different string parameters for each job
-params = ["GCN", "GAT", "SAGE"]
-
-# List to keep track of subprocesses
-processes = []
-
-# Launch train.py in parallel with different parameters
-for param in params:
+fail_count = 0
+def run_job(config: dict, architecture: str, seed: int):
+    config_str = str(config)  # Convert dictionary to string
     command = [
         'python', 'train.py',  # The script to run
-        '--data-path', data_path,  # Path to the data file
-        '--param', param  # Additional string parameter
+        '--config', config_str,
+        '--architecture', architecture,
+        '--seed', str(seed)
     ]
-    # Start the subprocess
     process = subprocess.Popen(command)
-    processes.append(process)
+    process.wait()  # Wait for the process to complete
+    return process.returncode
 
-# Wait for all processes to complete
-for process in processes:
-    process.wait()
 
-print("All training jobs have completed.")
+# Function to run job and handle exceptions
+def run_job_safe(args):
+    global fail_count
+    try:
+        return run_job(*args)
+    except Exception as e:
+        print(f"Job with args {args} generated an exception: {e}")
+        fail_count += 1
+        return None
 
+
+start_time = time.time()
+
+# range determines the number of Monte-Carlo runs
+seeds = list(range(1, 10))
+arguments = Scenarios()
+
+# List of arguments for the jobs
+job_args = [(c, a, s) for c in arguments
+            for a in ["GCN", "SAGE", "GAT"]
+            for s in seeds]
+
+# Before jobs are executed, create directories to store the results
+# With timestamp?
+#/GAT/perfect/res1.pkl
+#...
+##/GAT/perfect/res100.pkl
+
+max_concurrent_jobs = 4
+with mp.Pool(processes=max_concurrent_jobs) as pool:
+    results = pool.map(run_job_safe, job_args)
+
+print(f"{(1-(fail_count/len(job_args))) * 100} % of training jobs have completed !")
+
+end_time = time.time()
+elapsed_time = end_time - start_time
+print(f"Total execution time: {elapsed_time:.2f} seconds")
