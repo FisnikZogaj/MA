@@ -5,10 +5,11 @@ class Scenarios:
 
     perfect = {
 
+        "name": "perfect",
         "task": "multiclass",
 
-        "community_sizes": [200, 230, 300, 260], # fixed
-        "cluster_sizes": [200, 230, 300, 260], # same as com_size -> overlap
+        "community_sizes": [20, 230, 30, 260], # fixed
+        "cluster_sizes": [20, 230, 30, 260], # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4,
         "alpha": 2, "beta": 20, "lmbd": .5,
@@ -37,10 +38,11 @@ class Scenarios:
 
     noise = {
 
+            "name": "noise",
             "task": "multiclass",
 
-            "community_sizes": [200, 230, 300, 260], # fixed
-            "cluster_sizes": [200, 230, 300, 260], # same as com_size -> overlap
+            "community_sizes": [20, 230, 30, 260], # fixed
+            "cluster_sizes": [20, 230, 30, 260], # same as com_size -> overlap
             "m_features": 6,
             # "k_clusters": 4,
             "alpha": 2, "beta": 20, "lmbd": .5,
@@ -68,8 +70,11 @@ class Scenarios:
         }
 
     def __init__(self):
+
         self._elements = [self.perfect, self.noise]
         self._index = 0
+        self.list_of_scenarios = [self.perfect["name"],
+                                  self.noise["name"]]
 
     def __iter__(self):
         return self
@@ -81,3 +86,6 @@ class Scenarios:
             return result
         else:
             raise StopIteration
+
+    class Hyperparameters:
+        pass

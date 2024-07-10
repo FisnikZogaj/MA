@@ -1,7 +1,6 @@
 # Python Packages
 import pickle
 import numpy as np
-from datetime import datetime
 import os
 import argparse
 import ast
@@ -10,19 +9,19 @@ import ast
 from GNN_Models import *  # here the models are stored
 from ParametricGraphModels.ADC_SBM import from_config
 
-def run_experiment(graph_config: dict, architecture: str, seed: int):
+def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     """
     train.py script, that gets executed via main.py.
 
     :param graph_config: serialized graph Object
     :param architecture:
     :param seed:
+    :param ts:
     :return:
     """
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M").translate(str.maketrans({" ": ".", ":": ".", "-": "."}))
 
     # 1)  -----  Generate the Graph with a specified Configuration ------
-    g = from_config(graph_config,seed)
+    g = from_config(graph_config, seed)
     # g.rich_plot_graph()
     # print(g.purity(plot_it=True))
     # input("Precede with this graph ?")
@@ -58,7 +57,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int):
                               input_channels=num_input_features,
                               output_channels=num_targets)  # initialize here
     else:
-        raise ValueError(f"Model Architecture must be one of [GCN, SAGE, GAT]. '{architecture}' received.")
+        raise ValueError(f"Model Architecture must be one of [GCN, SAGE, GAT]. Received: '{architecture}'.")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lrn_rt, weight_decay=wgth_dcy)
     criterion = torch.nn.CrossEntropyLoss()
@@ -89,7 +88,6 @@ def run_experiment(graph_config: dict, architecture: str, seed: int):
         optimizer.step()
         return loss
 
-
     def test(data, mask):
         model.eval()
         out = model(data.x,
@@ -98,7 +96,6 @@ def run_experiment(graph_config: dict, architecture: str, seed: int):
         correct = pred[mask] == data.y[mask]
         acc = int(correct.sum()) / int(mask.sum())
         return acc
-
 
     def full_training(data, n_epochs=101):
         val_acc_track = np.zeros(n_epochs)
@@ -116,7 +113,6 @@ def run_experiment(graph_config: dict, architecture: str, seed: int):
         test_accuracy = test(data, data.test_mask)
 
         return loss_track, val_acc_track, test_accuracy
-
 
     def full_training_early_stop(data, n_epochs=101, patience=10):
         """
@@ -173,7 +169,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int):
         full_training_early_stop(g.DataObject, 100, 25))
 
     # ---------------- Save all results -----------------
-
+    # Saved at ExperimentLogs/ts/hypp.txt. Only once tho. Be additinal param ...
     hyperparams = {
         "out_dim": num_targets,
         "in_dim": num_input_features,
@@ -194,38 +190,22 @@ def run_experiment(graph_config: dict, architecture: str, seed: int):
         "final_epoch": final_epoch
     }
 
-    def save_res(params: dict, sub_name: str, train_output: dict, hyperparameters: dict, graph: any):
-        # Timestamped filenames advised
+    base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"
+    architecture_path = os.path.join(base, architecture)
+    final_path = os.path.join(architecture_path, graph_config["name"])
 
-        # 1) Create Subdirectory within ExperimentLogs
-        base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"
-        subdir_path = os.path.join(base, sub_name + ts)
-        os.makedirs(subdir_path, exist_ok=True)
+    output_path = os.path.join(final_path, f"output{seed}.pkl")
+    with open(output_path, 'wb') as file:
+        pickle.dump(train_output, file)
 
-        graph_params_path = os.path.join(subdir_path, "params.txt")
-        with open(graph_params_path, 'w') as file:
-            for k, v in params.items():
-                file.write(f"{k}: {v}\n")
-            file.write("\n" + "*"*40 + "\n")
-            for k, v in hyperparameters.items():
-                file.write(f"{k}: {v}\n")
-
-        # graph_path = os.path.join(subdir_path, "graph.pkl")
-        # with open(graph_path, 'wb') as file:
-        #    pickle.dump(graph, file)
-
-        output_path = os.path.join(subdir_path, "output.pkl")
-        with open(output_path, 'wb') as file:
-            pickle.dump(train_output, file)
-
-        print(f"Configuration written to {graph_params_path}")
-
+    # Further save Graph characteristics here
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training Script')
     parser.add_argument('--config', type=str, required=True, help='Config dict of the Graph')
     parser.add_argument('--architecture', type=str, required=True, help='What model to run: [GCN, SAGE,GAT]')
     parser.add_argument('--seed', type=int, required=True, help='reproducibility seed')
+    parser.add_argument('--timestamp', type=str, required=True, help='When has main been executed')
     args = parser.parse_args()
 
     # read in str()-representation of dict
@@ -233,4 +213,5 @@ if __name__ == "__main__":
 
     run_experiment(graph_config=args.config,
                    architecture=args.architecture,
-                   seed=args.seed)
+                   seed=args.seed,
+                   ts=args.timestamp)

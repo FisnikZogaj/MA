@@ -1,12 +1,6 @@
 import networkx as nx
 import torch
-from torch_geometric.datasets import Planetoid
-from torch_geometric.transforms import NormalizeFeatures
-import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
-
-
-from torch_geometric.nn import GATConv, SAGEConv, GCNConv
+from torch_geometric.nn import GATConv,SAGEConv, GCNConv
 import torch.nn.functional as F
 from torch_geometric.utils import to_networkx
 
