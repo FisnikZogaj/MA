@@ -8,14 +8,12 @@ from torch_geometric.data import Data
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from scipy.special import softmax
-import seaborn as sns
 from sklearn.manifold import TSNE
 from graspy.simulations import sbm
 import random
 
-import pickle
-import os
 
+#print(np.__version__) # potential errors with "pybind11" when numpy.__version__ == 2.__
 
 class ADC_SBM:
 
@@ -575,7 +573,7 @@ def synthetic_split(config: dict, splitweights: any):
 
 
 if __name__ == "__main__":
-    from config import MultiClassClassification
+    #from config import Scenarios
 
     #from_config(MultiClassClassification.perfect_graph)
     #synthetic_split(MultiClassClassification.perfect_graph, [.7,.2,.1])
@@ -630,5 +628,6 @@ if __name__ == "__main__":
     g.set_y(task="multiclass", weights=omega, feature_info="cluster", eps=.5)
     g.split_data([.7,.2,.1])
     g.set_Data_object()
+    g.rich_plot_graph()
     #print(g.DataObject.train_mask)
 

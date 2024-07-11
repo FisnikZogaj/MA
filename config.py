@@ -71,10 +71,13 @@ class Scenarios:
 
     def __init__(self):
 
-        self._elements = [self.perfect, self.noise]
-        self._index = 0
+        # Must have the same order for coherence !!
+        self._elements = [self.perfect,
+                          self.noise]
         self.list_of_scenarios = [self.perfect["name"],
                                   self.noise["name"]]
+        self._index = 0
+
 
     def __iter__(self):
         return self

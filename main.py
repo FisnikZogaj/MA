@@ -3,10 +3,10 @@ import time
 import multiprocessing as mp
 from datetime import datetime
 import os
-
 from config import Scenarios
 
 fail_count = 0
+
 def run_job(config: dict, architecture: str, seed: int, timestamp: str):
     """
     Run an entire train script that trains a graph (specified from config) with
@@ -30,12 +30,15 @@ def run_job(config: dict, architecture: str, seed: int, timestamp: str):
     process.wait()  # Wait for the process to complete
     return process.returncode
 
-
 # Function to run job and handle exceptions
-def run_job_safe(args):
+def run_job_safe(args, counter, lock, total_num_of_jobs):
     global fail_count
     try:
-        return run_job(*args)
+        result = run_job(*args)
+        with lock:
+            counter.value += 1
+            print(f"{counter.value}/{total_num_of_jobs} done!")
+        return result
     except Exception as e:
         print(f"Job with args {args} generated an exception: {e}")
         fail_count += 1
@@ -53,12 +56,10 @@ if __name__ == '__main__':
                 for a in ["GCN", "SAGE", "GAT"]
                 for s in seeds]
 
+    total_num_of_jobs = len(job_args)
+
     # Before jobs are executed:
     # ---- Make directories for saving ----
-
-    #ExperimentLogs/ts/GAT/perfect/res1.pkl
-    #...
-    #ExperimentLogs/ts/GAT/perfect/resN.pkl
 
     base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"
     subdir_path = os.path.join(base, ts)
@@ -66,8 +67,6 @@ if __name__ == '__main__':
 
     for arch in ["GCN", "SAGE", "GAT"]:
         for graphtype in arguments.list_of_scenarios:
-            # Make sure the list has same order as the dictionaries from Scenarios
-            # from: self._elements = [self.perfect, ... , self.noise]
             arch_path = os.path.join(subdir_path, arch)
             graphtype_path = os.path.join(arch_path, graphtype)
             os.makedirs(graphtype_path, exist_ok=True)
@@ -86,11 +85,16 @@ if __name__ == '__main__':
 
     # --------------- Start Multiprocess training -------------------
     print("start: ")
-    max_concurrent_jobs = 4
-    with mp.Pool(processes=max_concurrent_jobs) as pool:
-        results = pool.map(run_job_safe, job_args)
 
-    print(f"{(1-(fail_count/len(job_args))) * 100} % of training jobs have completed !")
+    manager = mp.Manager()
+    counter = manager.Value('i', 0)
+    lock = manager.Lock()
+    max_concurrent_jobs = 4
+
+    with mp.Pool(processes=max_concurrent_jobs) as pool:
+        results = [pool.apply_async(run_job_safe, args=(arg, counter, lock, total_num_of_jobs)) for arg in job_args]
+        for result in results:
+            result.get()  # Ensure each result is processed
 
     end_time = time.time()
     elapsed_time = end_time - start_time

@@ -1,4 +1,3 @@
-# Python Packages
 import pickle
 import numpy as np
 import os
@@ -77,9 +76,11 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     def train(data):
         model.train()
         optimizer.zero_grad()
+        # Note that all the inputs must be uniform across all models
         out = model(data.x, # Put Train Masks here?
                     data.edge_index, # and here?
-                    drop=drp1, drop2=drp2)
+                    drpt=drp1,
+                    drpt2=drp2)
 
         mask = data.train_mask # & (data.y != -1)
         loss = criterion(out[mask],
@@ -130,7 +131,8 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         # Initialize early stopping variables
         best_val_acc = -np.inf
         epochs_without_improvement = 0
-        best_epoch = 0
+        # best_epoch = 0
+        pseudo_break = False
 
         for epoch in range(n_epochs):
             loss = train(data)
@@ -138,21 +140,21 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
             val_acc_track[epoch] = val_acc
             loss_track[epoch] = loss
 
-            print(f'Epoch: {epoch + 1:03d}, Loss: {loss:.4f}, Val: {val_acc:.4f}')
+            # print(f'Epoch: {epoch + 1:03d}, Loss: {loss:.4f}, Val: {val_acc:.4f}')
 
             # Check if the current epoch has the best validation accuracy
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
-                best_epoch = epoch
+                # best_epoch = epoch
                 epochs_without_improvement = 0  # Reset the patience counter
             else:
                 epochs_without_improvement += 1
 
-            # Check for early stopping
-            if epochs_without_improvement >= patience:
-                print(f"Early stopping triggered at epoch {epoch + 1}")
+            if epochs_without_improvement >= patience and not pseudo_break:
+                # print(f"Early stopping triggered at epoch {epoch + 1}")
                 test_accuracy = test(data, data.test_mask)
                 early_stop = epoch + 1
+                pseudo_break = True # won't trigger if-clause anymore
                 # break
 
         if early_stop is not None:
@@ -191,7 +193,8 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     }
 
     base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"
-    architecture_path = os.path.join(base, architecture)
+    stamped = os.path.join(base, ts)
+    architecture_path = os.path.join(stamped, architecture)
     final_path = os.path.join(architecture_path, graph_config["name"])
 
     output_path = os.path.join(final_path, f"output{seed}.pkl")
@@ -208,10 +211,10 @@ if __name__ == "__main__":
     parser.add_argument('--timestamp', type=str, required=True, help='When has main been executed')
     args = parser.parse_args()
 
-    # read in str()-representation of dict
+    # read in str()-representation to return actual dict-type
     config = ast.literal_eval(args.config)
 
-    run_experiment(graph_config=args.config,
+    run_experiment(graph_config=config,
                    architecture=args.architecture,
                    seed=args.seed,
                    ts=args.timestamp)
