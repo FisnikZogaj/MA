@@ -40,21 +40,20 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     # --------------------------- Load Model ------------------------
 
     if architecture == "GCN":
-        model = ThreeLayerGCN(hidden_channels=16,
-                              hidden_channels2=8,
-                              input_channels=num_input_features,
-                              output_channels=num_targets)  # initialize here
+        model = TwoLayerGCN(hidden_channels=hc1,
+                            input_channels=num_input_features,
+                            output_channels=num_targets)  # initialize here
 
     elif architecture == "SAGE":
-        model = TwoLayerGraphSAGE(hidden_channels=16,
+        model = TwoLayerGraphSAGE(hidden_channels=hc1,
                                   input_channels=num_input_features,
                                   output_channels=num_targets)  # initialize here
 
     elif architecture == "GAT":
-        model = ThreeLayerGCN(hidden_channels=16,
-                              hidden_channels2=8,
-                              input_channels=num_input_features,
-                              output_channels=num_targets)  # initialize here
+        model = TwoLayerGAT(input_channels=num_input_features,
+                            hidden_channels=hc1,
+                            heads=num_input_features,
+                            output_channels=num_targets)  # initialize here
     else:
         raise ValueError(f"Model Architecture must be one of [GCN, SAGE, GAT]. Received: '{architecture}'.")
 
@@ -193,9 +192,9 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     }
 
     base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"
-    stamped = os.path.join(base, ts)
-    architecture_path = os.path.join(stamped, architecture)
-    final_path = os.path.join(architecture_path, graph_config["name"])
+    final_path = os.path.join(base, ts, architecture, graph_config["name"])
+    # architecture_path = os.path.join(stamped, architecture)
+    # final_path = os.path.join(architecture_path, graph_config["name"])
 
     output_path = os.path.join(final_path, f"output{seed}.pkl")
     with open(output_path, 'wb') as file:

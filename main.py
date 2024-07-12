@@ -47,7 +47,7 @@ def run_job_safe(args, counter, lock, total_num_of_jobs):
 if __name__ == '__main__':
     start_time = time.time()
     # Note: range determines the number of Monte-Carlo runs
-    seeds = list(range(1, 10))
+    seeds = list(range(1, 3))
     arguments = Scenarios()
 
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S").translate(str.maketrans({" ": "-", ":": "-"}))
@@ -84,7 +84,6 @@ if __name__ == '__main__':
         output_file.write(script_content)
 
     # --------------- Start Multiprocess training -------------------
-    print("start: ")
 
     manager = mp.Manager()
     counter = manager.Value('i', 0)

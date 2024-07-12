@@ -315,7 +315,7 @@ class ADC_SBM:
         plt.show()
 
 
-    def rich_plot_graph(self, ns:int=20, wdth:float=.3, alph:float=.1):
+    def rich_plot_graph(self,fig_size:tuple, ns:int=20, wdth:float=.3, alph:float=.1):
         """
         Plot the Graph, with communities/target-class up to 5 categories.
         Embedded into a 2-dimensional t-SNE space.
@@ -340,7 +340,7 @@ class ADC_SBM:
         shape_map = {0: 'x', 1: 'o', 2: "d", 3: "D", 4: "<"}
 
         # if self.task != "regression":
-        plt.figure(figsize=(10, 10))
+        plt.figure(figsize=fig_size)
         for shape in shape_map:
             # Could also do sizes
             nodelist = [node for node in G.nodes() if G.nodes[node]['target'] == shape]
@@ -370,8 +370,9 @@ class ADC_SBM:
         plt.show()
 
 
-    def purity(self, group_by: str = "Community", metric: str = "gini", plot_it:bool=False):
+    def purity(self, fig_size:tuple, group_by: str = "Community", metric: str = "gini", plot_it:bool=False):
         """
+        :param fig_size: (height x width)
         :param group_by: ["Community", "Cluster"]
         :param metric: gini or enrtropy
         :param plot_it: colors for plotting
@@ -388,7 +389,7 @@ class ADC_SBM:
             grouped_counts = df.groupby([group_by, 'Y']).size().unstack(fill_value=0)
 
             if plot_it:
-                grouped_counts.plot(kind='bar', figsize=(10, 6))
+                grouped_counts.plot(kind='bar', figsize=fig_size)
                 plt.xlabel(group_by)
                 plt.ylabel('Grouped Frequencies')
                 plt.title(' ')
