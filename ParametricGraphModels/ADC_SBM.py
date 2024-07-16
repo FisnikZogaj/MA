@@ -28,38 +28,45 @@ class ADC_SBM:
         self.pos_edge_label_index = None # used for link prediction
         self.neg_edge_label_index = None # used for link prediction
 
+        # Split Masks:
         self.train_mask = None
         self.test_mask = None
         self.val_mask = None
 
         self.degrees = None # degree of each node
-        self.task = None # string indicator
+        self.task = None # string indicator of the task
 
         self.community_sizes = community_sizes # list of sizes
         self.n_nodes = sum(community_sizes)
 
-        self.community_labels = np.concatenate([np.full(n, i) # labels the community
+        # labels the communities:
+        self.community_labels = np.concatenate([np.full(n, i)
                                                 for i, n in enumerate(community_sizes)])
         self.cluster_labels = None # labels the numeric feature cluster (gaussian component)
 
-        self.B = B # Block prob matrix
+        # Block prob matrix:
+        self.B = B
 
+        # Vector of degree corrections:
         self.dc = None
+
+        # Feature variables:
         self.x = None
         self.x_tsne = None
         self.y = None
-        self.num_y_labels = None
+        self.y_out_dim = None # either 1 when regression or k labels when not
+
         self.name = None
 
     # ------------------------ Instantiate Graph Object -------------------------
 
-    def correct_degree(self, alpha: float, beta: float, lmbd: float = .5, distribution: str = "exp"):
+    def correct_degree(self, alpha: float, beta: float, lmbd: float = .5, distribution: str = "exp") -> np.array:
         """
-        :param alpha: lower (or shape parameter)
-        :param beta: upper (or shape parameter)
-        :param lmbd: exponential coefficient for shape of
-        :param distribution:
-        :return:
+        :param alpha: lower bound (or shape parameter for beat-distribution)
+        :param beta: upper bound (or shape parameter for beat-distribution)
+        :param lmbd: exponential coefficient for shape of the distribution (not needed in case of beta)
+        :param distribution: whether to draw from a beta or an exp distribution
+        :return: Vector of degree corrections for every node.
         """
         # theta with a distribution between 0 and 1
         assert distribution in ["exp", "beta"], "Distribution must be in [exp, beta]"
@@ -82,7 +89,7 @@ class ADC_SBM:
 
     def gen_graph(self):
         """
-        Generate either DC-SBM or SBM from Graspy Module based on availability of degree correction.
+        Generate either DC-SBM or regular SBM from Graspy Module, based on availability of degree correction.
         """
         if self.dc is not None:
             dcsbm_graph = sbm(self.community_sizes, self.B, dc=self.dc, loops=False)
@@ -99,13 +106,15 @@ class ADC_SBM:
 
     def set_x(self, n_c: int, mu: list, sigma: list, w: any):
         """
-        :param stochastic: fixed or stochastic cluster components
-        :param n_c: number of cluster components
-        :param mu: list of tuples corresponding to
+        Generate the node feature matrix
+        :param n_c: number of feature clusters
+        :param mu: list of tuples corresponding to the cluster means
         num of features (tuple-length) and number of components (list-length)
+        [(1,1),(2,2),(2,3)] -> 3 clusters in 2-dimensional space
         :param sigma: list of Covariance matrices
-        :param w: mixture weights
-        :return: None
+        :param w: mixture weights for feature cluster sizes
+        (either list of probabilities summing up to one, or the actual number of nodes assigned to the clusters)
+        :sets: np.Array
 
         Add numeric features. Only used within the class. The X values for each component are sorted (asc. order)
          so indexing is straightforward (beneficial for Adj. Matrix?)
@@ -119,12 +128,12 @@ class ADC_SBM:
                 np.random.choice(n_c, size=self.n_nodes, p=w)
             )
         else:
-            # w are numbers per cluster group, generate by stacking.
+            # w are numbers per cluster group, generate by stacking. Correct length if necessary.
             if sum(w) != self.n_nodes:
-                w[0] += (self.n_nodes-sum(w)) # Correct length if necessary
+                w[0] += (self.n_nodes-sum(w))
 
             num = np.arange(len(w), dtype=np.int64)
-            component_labels = np.repeat(num, w) #stack label[i] w[i] times for each i
+            component_labels = np.repeat(num, w)
 
         data = np.array([np.random.multivariate_normal(mu[label],
                                                        sigma[label])
@@ -135,18 +144,22 @@ class ADC_SBM:
 
 
     def reduce_dim_x(self, rs=26):
+        """
+        Used to be able to plot graphs with more than 2 features.
+        :param rs: random state
+        """
         tsne = TSNE(n_components=2, random_state=rs)
         self.x_tsne = tsne.fit_transform(self.x)
 
 
-    def set_y(self, task: str, weights: np.array, feature_info="number", eps:float=1):
+    def set_y(self, task: str, weights: np.array, feature_info="cluster", eps:float=1):
         """
         :param task: ["regression","binary","multiclass"]
         :param weights: array of numbers specifying the importance of each feature
         (order is relevant to match the feature matrix!)
         A vector if not multiclass, else a matrix with m_rows = number of classes, n_col = number of features)
         E.g.: weights = np.array([0.5, 1.0, 2.0, 2.0])
-        :param distribution: Distribution, from which to draw the parameters from
+        :param feature_info: if "cluster": betas for dummies are generated, else raw coefficients for numeric feature values
         :param eps: Variance of the error component, high variances will lead to heavy Y-mixing between clusters
         :return: targets
         """
@@ -186,12 +199,13 @@ class ADC_SBM:
         if task == "regression":
             error = np.random.normal(0, eps, self.n_nodes)
             self.y = np.dot(feat_mat, beta) + error
+            self.y_out_dim = 1
 
         if task == "binary":
             error = np.random.normal(0, eps, self.n_nodes)
             self.y = ((1 / (1 + np.exp(-np.dot(feat_mat, beta))) + error)
                       > np.random.uniform(size=self.n_nodes))
-            self.num_y_labels = 2
+            self.y_out_dim = 2
 
         if task == "multiclass":
             # assert
@@ -199,7 +213,7 @@ class ADC_SBM:
             logits = np.dot(feat_mat, beta.T) + error
             probabilities = softmax(logits, axis=1)
             self.y = np.argmax(probabilities, axis=1)
-            self.num_y_labels = probabilities.shape[1]
+            self.y_out_dim = probabilities.shape[1]
 
     # -------------------- Prepare Data Objects for Training -------------------------------
 
@@ -207,6 +221,7 @@ class ADC_SBM:
         """
         :param size: sample size of pos and neg edges
         Throws an error when not enough negative connections are established.
+        This happens when the Graph is to connected.
         """
         assert self.edge_index is not None, "No edge_indices set."
 
@@ -224,7 +239,7 @@ class ADC_SBM:
         all_permutations = set(list(itertools.combinations(list(range(self.n_nodes)), 2)))
 
         samp_space = np.array(list(all_permutations - tuple_pos)).T
-        # print(samp_space.shape[1] + len(tuple_pos) == len(all_permutations)) # -> True
+
         assert samp_space.shape[1] >= size, \
             (f"Not enough negative connections to sample from. possible: {samp_space.shape[1]} | "
              f"required:{size}")
@@ -259,6 +274,7 @@ class ADC_SBM:
             self.train_mask = torch.tensor(rv == 'train')
             self.test_mask = torch.tensor(rv == 'test')
             self.val_mask = torch.tensor(rv == 'val')
+
 
     def set_Data_object(self):
         data = Data(x=torch.tensor(self.x, dtype=torch.float32),
@@ -336,8 +352,8 @@ class ADC_SBM:
             # G.nodes[i]['size'] = self.degrees[i]
 
         pos = {node: data['pos'] for node, data in G.nodes(data=True)}
-        color_map = {0: 'purple', 1: 'darkgreen', 2: 'gold', 3: "black", 4: "silver"}
-        shape_map = {0: 'x', 1: 'o', 2: "d", 3: "D", 4: "<"}
+        color_map = {0: 'purple', 1: 'darkgreen', 2: 'gold', 3: "black", 4: "silver", 5: "darkblue"}
+        shape_map = {0: 'x', 1: 'o', 2: "d", 3: "D", 4: "<", 5: ">"}
 
         # if self.task != "regression":
         plt.figure(figsize=fig_size)
@@ -370,7 +386,7 @@ class ADC_SBM:
         plt.show()
 
 
-    def purity(self, fig_size:tuple, group_by: str = "Community", metric: str = "gini", plot_it:bool=False):
+    def purity(self, fig_size:tuple, group_by: str = "Community", metric:str = "gini", plot_it:bool=False):
         """
         :param fig_size: (height x width)
         :param group_by: ["Community", "Cluster"]
@@ -398,16 +414,17 @@ class ADC_SBM:
 
             if metric == "gini":
                 fun = lambda x: 1 - sum(x ** 2)
-            if metric == "entropy":
+            elif metric == "entropy":
                 fun = lambda x: -sum(x * np.log2(x + 1e-9))
+            else:
+                raise ValueError("Choose metric 'gini' or 'entropy'.")
 
-            within_c = grouped_counts
-
-            return (within_c.
-                   div(within_c.sum(axis=1), axis=0).
+            return (grouped_counts.
+                   div(grouped_counts.sum(axis=1), axis=0).
                    apply(fun, axis=1)
                     )
-
+        else:
+            raise NotImplementedError
        # ------------------ for numeric targets -------------------
        # deprecated
 
@@ -434,6 +451,7 @@ class ADC_SBM:
 
 def getB(m: int, b_range: tuple, w_range: tuple, rs: int = False):
     """
+    B is the matrix that is used for the SBM as well as for generating proper covariance matrices.
 
     :param m: row and col dimension
     :param b_range: between range -> triangular part
@@ -450,33 +468,61 @@ def getB(m: int, b_range: tuple, w_range: tuple, rs: int = False):
 
     return B
 
-def getW(m_targets, n_communities, j_features, k_clusters, feature_info="number",
-         w_degree=0, w_x=4, w_com=1.5, exponent:float=1):
-    """
-    Generate community beta matrix with row-wise exponential distributed values.
+#def getW(m_targets, n_communities, j_features, k_clusters, feature_info: str,
+#         w_degree: float, w_x: float, w_com: float, exponent: float = 1):
+#    """
+#    Generate community beta matrix with row-wise exponential distributed values.
+#    Idea is to generate discrepant values (from long-tail distribution) for each row (target), so that
+#    communities or feature-clusters are emphasized properly.
+#
+#    is relevant.
+#    :param m_targets: number of unique target-labels -> col-dim
+#    :param n_communities: number of communities
+#    :param j_features: feature dimension, only relevant for raw coefficients
+#    :param w_degree: weight for degree importance
+#    :param w_x:
+#    :param exponent:
+#    :param w_com: shape parameter for exp distribution to draw coefficients from
+#    if 0 -> communities irrelevant for target
+#    :return:
+#    """
+#    degree_betas = np.random.normal(loc=w_degree, scale=1, size=(m_targets, 1))
+#
+#    if feature_info == "number":
+#        x_betas = np.random.normal(loc=w_x, scale=1, size=(j_features, m_targets)).T
+#    elif feature_info == "cluster":
+#        x_betas = np.power(np.random.exponential(w_x, (k_clusters, m_targets)).T, exponent)
+#    else:
+#        raise ValueError(f"feature_info must either be 'number' or 'cluster'. '{feature_info}' provided")
+#
+#    community_betas = np.power(np.random.exponential(w_com, (n_communities, m_targets)).T, exponent)
+#
+#    return np.hstack((degree_betas, x_betas, community_betas))
 
-    is relevant.
-    :param m_targets:
-    :param n_communities:
-    :param j_features:
-    :param w_degree:
-    :param w_x:
-    :param exponent:
-    :param w_com: if 0 -> communities irrelevant for target
-    :return:
+
+def getW(m_targets, n_communities, j_features, k_clusters, feature_info: str,
+         w_degree: float, w_x: float, w_com: float, exponent: float = 1):
     """
+    Newer Version, that doesn't rely on random chance too much.
+
+    """
+
     degree_betas = np.random.normal(loc=w_degree, scale=1, size=(m_targets, 1))
 
     if feature_info == "number":
         x_betas = np.random.normal(loc=w_x, scale=1, size=(j_features, m_targets)).T
     elif feature_info == "cluster":
-        x_betas = np.power(np.random.exponential(w_x, (k_clusters, m_targets)).T, exponent)
+        x_betas = np.random.uniform(0, 1, (m_targets, k_clusters))
+        np.fill_diagonal(x_betas, x_betas.diagonal() + w_x)
     else:
         raise ValueError(f"feature_info must either be 'number' or 'cluster'. '{feature_info}' provided")
 
-    community_betas = np.power(np.random.exponential(w_com, (n_communities, m_targets)).T, exponent)
+    community_betas = np.random.uniform(0, 1, (m_targets, n_communities))
+    np.fill_diagonal(community_betas, community_betas.diagonal() + w_com)
 
     return np.hstack((degree_betas, x_betas, community_betas))
+
+
 
 def from_config(config:dict, rs = 26):
     """
@@ -512,6 +558,7 @@ def from_config(config:dict, rs = 26):
     x_importance = config["x_importance"]
     community_importance = config["community_importance"]
 
+    assert sum(community_sizes) == sum(cluster_sizes), "sum(community_sizes) != sum(cluster_sizes)"
     # 3) ----------------- Init Graph -----------------
     B = getB(m=b_communities, b_range=b_com_r, w_range=w_com_r)  # get Connection Matrix
     g = ADC_SBM(community_sizes=community_sizes, B=B)  # instantiate class
@@ -535,28 +582,30 @@ def from_config(config:dict, rs = 26):
             )
 
     # 5) ----------------- Set Node features -----------------
-    omega = getW(m_targets=n_targets, n_communities=b_communities, j_features=m_features,
-                 k_clusters=k_clusters, w_degree=degree_importance, feature_info=config["feature_info"],
-                 w_x=x_importance, w_com=community_importance, exponent=1)
+    if config["task"]:
+        omega = getW(m_targets=n_targets, n_communities=b_communities, j_features=m_features,
+                     k_clusters=k_clusters, w_degree=degree_importance, feature_info=config["feature_info"],
+                     w_x=x_importance, w_com=community_importance, exponent=1)
 
-    g.set_y(task=config["task"], weights=omega, feature_info="number", eps=config["model_error"])
+
+    g.set_y(task=config["task"], weights=omega, feature_info="cluster", eps=config["model_error"])
 
     g.split_data(config["splitweights"]) # Data must be split, before creating the object !
     g.set_Data_object()
 
     return g
 
-def synthetic_split(config: dict, splitweights: any):
+def synthetic_split(config: dict, splitweights: any, rs:int):
     """
     Generate three different graphs with same configs but different sizes for
-    a synthetic tran, test, validation split.
+    a synthetic train, test, validation split.
 
     rename nodes, to handle splitting?
     :param config:
     :param splitweights:
     :return:
     """
-    rs = 26
+    # rs = 26
     initial_com_size = config["community_sizes"]
     initial_clust_size = config["cluster_sizes"]
 
@@ -574,9 +623,10 @@ def synthetic_split(config: dict, splitweights: any):
 
 
 if __name__ == "__main__":
-    #from config import Scenarios
+    from config import Scenarios
 
-    #from_config(MultiClassClassification.perfect_graph)
+    g = from_config(Scenarios.community_relevant)
+    #g.purity(fig_size=(7,7), group_by="Community", plot_it=False)
     #synthetic_split(MultiClassClassification.perfect_graph, [.7,.2,.1])
 
 
@@ -629,6 +679,6 @@ if __name__ == "__main__":
     g.set_y(task="multiclass", weights=omega, feature_info="cluster", eps=.5)
     g.split_data([.7,.2,.1])
     g.set_Data_object()
-    g.rich_plot_graph()
+    # g.rich_plot_graph(fig_size=(7, 7))
     #print(g.DataObject.train_mask)
 

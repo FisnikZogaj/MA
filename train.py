@@ -1,8 +1,10 @@
 import pickle
-import numpy as np
 import os
 import argparse
 import ast
+
+import numpy as np
+import torch.nn
 
 # Custom Modules
 from GNN_Models import *  # here the models are stored
@@ -27,7 +29,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
 
     # ----------- Define Hyperparameters for training ----------------
 
-    num_targets = g.num_y_labels
+    num_targets = g.y_out_dim # important flag for task determination
     num_input_features = g.x.shape[1]
     wgth_dcy = 5e-4
     lrn_rt = 0.01
@@ -52,13 +54,24 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     elif architecture == "GAT":
         model = TwoLayerGAT(input_channels=num_input_features,
                             hidden_channels=hc1,
-                            heads=num_input_features,
+                            heads=attention_heads,
                             output_channels=num_targets)  # initialize here
     else:
         raise ValueError(f"Model Architecture must be one of [GCN, SAGE, GAT]. Received: '{architecture}'.")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lrn_rt, weight_decay=wgth_dcy)
-    criterion = torch.nn.CrossEntropyLoss()
+
+    if g.y_out_dim > 2:
+        criterion = torch.nn.CrossEntropyLoss()
+        mtrc = "CEL"
+
+    elif g.y_out_dim == 2:
+        criterion = torch.nn.BCELoss()
+        mtrc = "BCEL"
+
+    else:
+        criterion = torch.nn.MSELoss()
+        mtrc = "MSE"
 
     # ------------- Train The model --------------------
 
@@ -75,9 +88,9 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     def train(data):
         model.train()
         optimizer.zero_grad()
-        # Note that all the inputs must be uniform across all models
-        out = model(data.x, # Put Train Masks here?
-                    data.edge_index, # and here?
+        # Note that all the parameter-inputs must be uniform across all models
+        out = model(data.x, # Mask missing values for semi-unsupervised learning
+                    data.edge_index, # here as well
                     drpt=drp1,
                     drpt2=drp2)
 
@@ -89,12 +102,22 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         return loss
 
     def test(data, mask):
+        # global metric
         model.eval()
         out = model(data.x,
                     data.edge_index)
-        pred = out.argmax(dim=1)
-        correct = pred[mask] == data.y[mask]
-        acc = int(correct.sum()) / int(mask.sum())
+
+        if mtrc == "CEL":
+            pred = out.argmax(dim=1)
+            correct = pred[mask] == data.y[mask]
+            acc = int(correct.sum()) / int(mask.sum())
+
+        elif mtrc == "BCEL":
+            raise NotImplementedError
+
+        elif mtrc == "MSE":
+            acc = np.mean(np.power(out[mask] - data.y[mask], 2))
+
         return acc
 
     def full_training(data, n_epochs=101):
@@ -170,18 +193,6 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         full_training_early_stop(g.DataObject, 100, 25))
 
     # ---------------- Save all results -----------------
-    # Saved at ExperimentLogs/ts/hypp.txt. Only once tho. Be additinal param ...
-    hyperparams = {
-        "out_dim": num_targets,
-        "in_dim": num_input_features,
-        "weight_decay": wgth_dcy,
-        "hidden_layer1_dim": hc1,
-        "hidden_layer2_dim": hc2,
-        "drop_out1": drp1,
-        "drop_out2": drp2,
-        "learn_rate": lrn_rt,
-        "attention_heads": attention_heads
-    }
 
     train_output = {
         "model": architecture,

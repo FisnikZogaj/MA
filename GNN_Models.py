@@ -104,9 +104,7 @@ if __name__ == '__main__':
     drp2 = .1
     attention_heads = 8
 
-    model = TwoLayerGAT(
-
-    )
+    model = TwoLayerGAT()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lrn_rt, weight_decay=wgth_dcy)
     criterion = torch.nn.CrossEntropyLoss()
@@ -122,7 +120,7 @@ if __name__ == '__main__':
 
         mask = data.train_mask # & (data.y != -1)
         loss = criterion(out[mask],
-                         data.y[mask]) # only calculate loss on train?
+                         data.y[mask]) # only calculate loss on train (due to graph structure)
         loss.backward()
         optimizer.step()
         return loss
