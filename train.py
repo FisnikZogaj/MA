@@ -2,7 +2,6 @@ import pickle
 import os
 import argparse
 import ast
-
 import numpy as np
 import torch.nn
 
@@ -22,14 +21,12 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     """
 
     # 1)  -----  Generate the Graph with a specified Configuration ------
+    # print("*" * 40)
     g = from_config(graph_config, seed)
-    # g.rich_plot_graph()
-    # print(g.purity(plot_it=True))
-    # input("Precede with this graph ?")
 
     # ----------- Define Hyperparameters for training ----------------
 
-    num_targets = g.y_out_dim # important flag for task determination
+    num_targets = g.y_out_dim # important flag for task determination. Number of targets |tau|
     num_input_features = g.x.shape[1]
     wgth_dcy = 5e-4
     lrn_rt = 0.01
@@ -141,11 +138,13 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         """
         Run a full train_loop, with early stopping. Will run the full Epochs, but track the early stop
         and calculate test accuracy at that point.
+        Control-flow could be problematic
         :param data:
         :param n_epochs:
         :param patience:
         :return:
         """
+
         val_acc_track = np.zeros(n_epochs)
         loss_track = np.zeros(n_epochs)
         early_stop = None
@@ -153,7 +152,6 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         # Initialize early stopping variables
         best_val_acc = -np.inf
         epochs_without_improvement = 0
-        # best_epoch = 0
         pseudo_break = False
 
         for epoch in range(n_epochs):
@@ -167,31 +165,32 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
             # Check if the current epoch has the best validation accuracy
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
-                # best_epoch = epoch
                 epochs_without_improvement = 0  # Reset the patience counter
             else:
                 epochs_without_improvement += 1
 
-            if epochs_without_improvement >= patience and not pseudo_break:
+            if epochs_without_improvement > patience and not pseudo_break:
                 # print(f"Early stopping triggered at epoch {epoch + 1}")
                 test_accuracy = test(data, data.test_mask)
                 early_stop = epoch + 1
-                pseudo_break = True # won't trigger if-clause anymore
+                pseudo_break = True  # won't trigger if-clause anymore
+                test_accuracy = test(data, data.test_mask)
                 # break
 
-        if early_stop is not None:
-            # then it was never overwritten
+        if early_stop is None:
+            # Training was never aborted due to early stopping, thus it stayed None.
             test_accuracy = test(data, data.test_mask)
 
         loss_track = loss_track #[:epoch]
         val_acc_track = val_acc_track #[:epoch]
 
-        return loss_track, val_acc_track, test_accuracy, early_stop # epoch,
+        return loss_track, val_acc_track, test_accuracy, early_stop  #
 
 
     loss_track, val_acc_track, test_accuracy, final_epoch = (
         full_training_early_stop(g.DataObject, 100, 25))
 
+    print("Training successfully completed!")
     # ---------------- Save all results -----------------
 
     train_output = {
@@ -202,8 +201,13 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         "final_epoch": final_epoch
     }
 
+    # Linux vs Windows
     base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"
+    #base = r""
+
     final_path = os.path.join(base, ts, architecture, graph_config["name"])
+    final_gchar_path = os.path.join(base, ts, "GraphCharacteristics", graph_config["name"])
+
     # architecture_path = os.path.join(stamped, architecture)
     # final_path = os.path.join(architecture_path, graph_config["name"])
 
@@ -211,12 +215,21 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     with open(output_path, 'wb') as file:
         pickle.dump(train_output, file)
 
-    # Further save Graph characteristics here
+    # ---- Further save Graph characteristics here ----
+    GraphCharacteristics = {
+        "tec": g.target_edge_counter(),
+        "pur": g.purity(),
+        "lab_corr": g.label_correlation()
+    }
+
+    output_path = os.path.join(final_gchar_path, f"output{seed}.pkl")
+    with open(output_path, 'wb') as file:
+        pickle.dump(GraphCharacteristics, file)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training Script')
     parser.add_argument('--config', type=str, required=True, help='Config dict of the Graph')
-    parser.add_argument('--architecture', type=str, required=True, help='What model to run: [GCN, SAGE,GAT]')
+    parser.add_argument('--architecture', type=str, required=True, help='What model to run: [GCN, SAGE, GAT]')
     parser.add_argument('--seed', type=int, required=True, help='reproducibility seed')
     parser.add_argument('--timestamp', type=str, required=True, help='When has main been executed')
     args = parser.parse_args()
@@ -228,3 +241,12 @@ if __name__ == "__main__":
                    architecture=args.architecture,
                    seed=args.seed,
                    ts=args.timestamp)
+
+
+    # ---- for debugging ------
+
+     # from config import Scenarios
+     # run_experiment(graph_config=Scenarios.community_relevant,
+     #                 architecture="GCN",
+     #                 seed=1,
+     #                 ts="debug")

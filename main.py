@@ -6,6 +6,8 @@ import os
 from config import Scenarios
 
 fail_count = 0
+base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"  # my machine
+# base = r"" # Linux server
 
 def run_job(config: dict, architecture: str, seed: int, timestamp: str):
     """
@@ -17,8 +19,10 @@ def run_job(config: dict, architecture: str, seed: int, timestamp: str):
     :param timestamp:
     :return:
     """
+
+    python = r'C:\Users\zogaj\PycharmProjects\MA\venv\Scripts\python.exe' # my machine
+    #python = r'\venv\Scripts\python.exe' # linux server
     config_str = str(config)  # Convert dictionary to string for argparse
-    python = r'C:\Users\zogaj\PycharmProjects\MA\venv\Scripts\python.exe'
     command = [
         python, 'train.py',  # The script to run on the version of python specified
         '--config', config_str,
@@ -27,7 +31,7 @@ def run_job(config: dict, architecture: str, seed: int, timestamp: str):
         '--timestamp', timestamp,
     ]
     process = subprocess.Popen(command)
-    process.wait()  # Wait for the process to complete
+    process.wait()  # Wait for the process to complete!
     return process.returncode
 
 # Function to run job and handle exceptions
@@ -59,9 +63,8 @@ if __name__ == '__main__':
     total_num_of_jobs = len(job_args)
 
     # Before jobs are executed:
-    # ---- Make directories for saving ----
+    # ---- Make directories for saving Train results ----
 
-    base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"
     subdir_path = os.path.join(base, ts)
     os.makedirs(subdir_path, exist_ok=True)
 
@@ -71,12 +74,23 @@ if __name__ == '__main__':
             graphtype_path = os.path.join(arch_path, graphtype)
             os.makedirs(graphtype_path, exist_ok=True)
 
+    # ---- Make directories for saving Graph Characteristics ---
+
+    for graphtype in arguments.list_of_scenarios:
+        # purity: gini and entropy for com/centroid
+        # tec: target edge counter
+        # lab_corr: 4 metrics for y~c, y~f, c~f
+        gchar_path = os.path.join(subdir_path, "GraphCharacteristics")
+        gtype_path = os.path.join(gchar_path, graphtype)
+        os.makedirs(gtype_path, exist_ok=True)
+
+
     # ------------ Save the configs used for Graph generating and training -------------------
 
     input_file_path = 'config.py'
     output_file_path = os.path.join(subdir_path, 'configs.txt')
 
-    # Copy the code from the script and write it to configs.txt.
+    # Copy the code from config.py and write it to configs.txt.
     with open(input_file_path, 'r') as input_file:
         script_content = input_file.read()
 
