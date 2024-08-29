@@ -366,68 +366,26 @@ class ADC_SBM:
         plt.show()
 
 
-    # def purity(self, fig_size: tuple = (6,6), group_by: str = "Community", metric:str = "gini", plot_it:bool=False):
-    #     """
-    #     :param fig_size: (height x width)
-    #     :param group_by: ["Community", "Feat.Cluster"]
-    #     :param metric: gini or enrtropy
-    #     :param plot_it: colors for plotting
-    #     Plot Grouped Distribution for Target Y
-    #     :return: A dataframe with purity-scores for each group
-    #     """
-    #     assert group_by in ["Community", "Feat.Cluster"], "group_by 'Feat.Cluster' or 'Community'"
-    #     cdict = {"Community": self.community_labels, "Feat.Cluster": self.cluster_labels}
-    #
-    #     df = pd.DataFrame({group_by: cdict[group_by], 'Y': self.y})
-    #
-    #     if not self.task == "regression":
-    #         # Use Characteristics suitable for categorical data
-    #         grouped_counts = df.groupby([group_by, 'Y']).size().unstack(fill_value=0)
-    #
-    #         if plot_it:
-    #             grouped_counts.plot(kind='bar', figsize=fig_size)
-    #             plt.xlabel(group_by)
-    #             plt.ylabel('Grouped Frequencies')
-    #             plt.title(' ')
-    #             plt.legend(title="Target Label")
-    #             plt.show()
-    #
-    #         if metric == "gini":
-    #             fun = lambda x: 1 - sum(x ** 2)
-    #         elif metric == "entropy":
-    #             fun = lambda x: -sum(x * np.log2(x + 1e-9))
-    #             # lambda x: -np.sum(x * np.log2(x + 1e-9)) if np.all(x > 0) else 0.0
-    #         else:
-    #             raise ValueError("Choose metric 'gini' or 'entropy'.")
-    #
-    #         pure_df = (
-    #                    grouped_counts.
-    #                    div(grouped_counts.sum(axis=1), axis=0).
-    #                    apply(fun, axis=1)
-    #                 )
-    #         pure_df.columns = [group_by, metric]
-    #
-    #         return pure_df
-    #         # Rewrite purity to output both gini and entropy
-    #     else:
-    #         raise NotImplementedError
-
-    def purity(self, fig_size: tuple = (6,6), group_by: str = "Community", metric:str = "gini", plot_it:bool=False):
+    def purity(self, metric:str = "gini"):
         """
-        :param fig_size: (height x width)
         :param group_by: ["Community", "Feat.Cluster"]
         :param metric: gini or enrtropy
         :param plot_it: colors for plotting
         Plot Grouped Distribution for Target Y
         :return: A dataframe with purity-scores for each group
         """
+        #grouped_counts.plot(kind='bar', figsize=fig_size)
+        # plt.xlabel(group_by)
+        # plt.ylabel('Grouped Frequencies')
+        # plt.title(' ')
+        # plt.legend(title="Target Label")
+        # plt.show()
 
+        df_f = pd.DataFrame({"Feat.Cluster": self.cluster_labels, 'Y': self.y})
+        df_c = pd.DataFrame({"Community": self.community_labels, 'Y': self.y})
 
-        df_f = pd.DataFrame({group_by: self.cluster_labels, 'Y': self.y})
-        df_c = pd.DataFrame({group_by: self.community_labels, 'Y': self.y})
-
-        grouped_counts_f = df_f.groupby(["feat.clust", 'Y']).size().unstack(fill_value=0)
-        grouped_counts_c = df_f.groupby(["community", 'Y']).size().unstack(fill_value=0)
+        grouped_counts_f = df_f.groupby(["Feat.Cluster", 'Y']).size().unstack(fill_value=0)
+        grouped_counts_c = df_c.groupby(["Community", 'Y']).size().unstack(fill_value=0)
 
         gini = lambda x: 1 - sum(x ** 2)
         entropy = lambda x: -sum(x * np.log2(x + 1e-9))
@@ -441,10 +399,11 @@ class ADC_SBM:
                     )
             pure_df_2 = (
                        grouped_counts_c.
-                       div(grouped_counts_f.sum(axis=1), axis=0).
+                       div(grouped_counts_c.sum(axis=1), axis=0).
                        apply(gini, axis=1)
                 )
-            return pd.concat([pure_df1, pure_df_2], ignore_index=True)
+            return {"centroids": pure_df1,
+                    "community": pure_df_2}
 
         if metric == "entropy":
             pure_df_3 = (
@@ -454,13 +413,12 @@ class ADC_SBM:
                     )
             pure_df_4 = (
                        grouped_counts_c.
-                       div(grouped_counts_f.sum(axis=1), axis=0).
+                       div(grouped_counts_c.sum(axis=1), axis=0).
                        apply(entropy, axis=1)
                 )
 
-            return pd.concat([pure_df_3, pure_df_4], ignore_index=True)
-
-
+            return {"centroids": pure_df_3,
+                    "community": pure_df_4}
 
 
 def getB(m: int, b_range: tuple, w_range: tuple, rs: int = False):
@@ -667,7 +625,5 @@ if __name__ == "__main__":
     g.set_y(task="multiclass", weights=omega, feature_info="cluster", eps=.5)
     g.split_data([.7,.2,.1])
     g.set_Data_object()
-    print(g.target_edge_counter())
-    # g.rich_plot_graph(fig_size=(7, 7))
-    #print(g.DataObject.train_mask)
+    print(g.purity())
 

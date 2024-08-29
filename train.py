@@ -179,12 +179,13 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
 
         if early_stop is None:
             # Training was never aborted due to early stopping, thus it stayed None.
+            early_stop = n_epochs - 1
             test_accuracy = test(data, data.test_mask)
 
         loss_track = loss_track #[:epoch]
         val_acc_track = val_acc_track #[:epoch]
 
-        return loss_track, val_acc_track, test_accuracy, early_stop  #
+        return loss_track, val_acc_track, test_accuracy, early_stop
 
 
     loss_track, val_acc_track, test_accuracy, final_epoch = (
