@@ -1,31 +1,34 @@
 import torch
 from torch_geometric.nn import GATConv, SAGEConv, GCNConv
 import torch.nn.functional as F
+# Note: softmax at the end of each forward pass not necessary because CLE expects raw scores.
 
 # ------------------------------------------------------------------
 # ----------------------------- GCN --------------------------------
 # ------------------------------------------------------------------
 
-class ThreeLayerGCN(torch.nn.Module):
-    def __init__(self, hidden_channels, hidden_channels2, input_channels, output_channels):
-        super().__init__()
-        torch.manual_seed(26)
-        self.conv1 = GCNConv(input_channels, hidden_channels)
-        self.conv2 = GCNConv(hidden_channels, hidden_channels2)
-        self.conv3 = GCNConv(hidden_channels2, output_channels)
-
-    def forward(self, x, edge_index, drpt=0, drpt2=0):
-        x = self.conv1(x, edge_index)
-        x = x.relu()
-        x = F.dropout(x, p=drpt, training=self.training)
-
-        x = self.conv2(x, edge_index)
-        x = x.relu()
-        x = F.dropout(x, p=drpt2, training=self.training)
-
-        x = self.conv3(x, edge_index)
-
-        return x
+# class ThreeLayerGCN(torch.nn.Module):
+#     # Deprecated
+#     def __init__(self, hidden_channels, hidden_channels2, input_channels, output_channels):
+#         super().__init__()
+#         torch.manual_seed(26)
+#         self.conv1 = GCNConv(input_channels, hidden_channels)
+#         self.conv2 = GCNConv(hidden_channels, hidden_channels2)
+#         self.conv3 = GCNConv(hidden_channels2, output_channels)
+#
+#     def forward(self, x, edge_index, drpt=0, drpt2=0):
+#         x = self.conv1(x, edge_index)
+#         x = x.relu()
+#         x = F.dropout(x, p=drpt, training=self.training)
+#
+#         x = self.conv2(x, edge_index)
+#         x = x.relu()
+#         x = F.dropout(x, p=drpt2, training=self.training)
+#
+#         x = self.conv3(x, edge_index)
+#         # x = F.softmax(x)
+#
+#         return x
 
 class TwoLayerGCN(torch.nn.Module):
     def __init__(self, hidden_channels, input_channels, output_channels):
@@ -40,7 +43,8 @@ class TwoLayerGCN(torch.nn.Module):
         x = F.dropout(x, p=drpt, training=self.training)
 
         x = self.conv2(x, edge_index)
-        x = x.relu()
+        # x = x.relu()
+        # x = F.softmax(x)
 
         return x
 
@@ -52,8 +56,8 @@ class TwoLayerGraphSAGE(torch.nn.Module):
     def __init__(self, hidden_channels, input_channels, output_channels):
         super(TwoLayerGraphSAGE, self).__init__()
         torch.manual_seed(26)
-        self.conv1 = SAGEConv(input_channels, hidden_channels)  # First GraphSAGE layer
-        self.conv2 = SAGEConv(hidden_channels, output_channels)  # Second GraphSAGE layer
+        self.conv1 = SAGEConv(input_channels, hidden_channels, aggr='mean')  # 'lstm', 'max', 'pool'?
+        self.conv2 = SAGEConv(hidden_channels, output_channels, aggr='mean')
 
     def forward(self, x, edge_index, drpt=0, drpt2=0):
         x = self.conv1(x, edge_index)
@@ -61,7 +65,7 @@ class TwoLayerGraphSAGE(torch.nn.Module):
         x = F.dropout(x, p=drpt, training=self.training)
 
         x = self.conv2(x, edge_index)
-        x = x.relu()
+        # x = x.relu()
 
         return x
 
@@ -84,11 +88,12 @@ class TwoLayerGAT(torch.nn.Module):
         x = self.conv2(x, edge_index)
 
         # Optionally apply an activation function if needed for the final output
-        # x = F.elu(x)
+        # x = F.softmax(x)
 
         return x
 
 if __name__ == '__main__':
+
     from ParametricGraphModels.ADC_SBM import *
     from config import Scenarios
     print(Scenarios.noise["community_sizes"])

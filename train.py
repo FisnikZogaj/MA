@@ -86,20 +86,25 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         model.train()
         optimizer.zero_grad()
         # Note that all the parameter-inputs must be uniform across all models
-        out = model(data.x, # Mask missing values for semi-unsupervised learning
-                    data.edge_index, # here as well
+        out = model(data.x,  # Mask missing values for semi-unsupervised learning
+                    data.edge_index,  # here as well
                     drpt=drp1,
                     drpt2=drp2)
 
-        mask = data.train_mask # & (data.y != -1)
+        mask = data.train_mask  # & (data.y != -1)
         loss = criterion(out[mask],
-                         data.y[mask]) # only calculate loss on train?
+                         data.y[mask])  # only calculate loss on train?
         loss.backward()
         optimizer.step()
         return loss
 
-    def test(data, mask):
-        # global metric
+    def test(data, mask) -> float:
+        """
+
+        :param data: A torch.Data object.
+        :param mask: Controlling whether test or validation data is used.
+        :return:
+        """
         model.eval()
         out = model(data.x,
                     data.edge_index)
@@ -182,8 +187,8 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
             early_stop = n_epochs - 1
             test_accuracy = test(data, data.test_mask)
 
-        loss_track = loss_track #[:epoch]
-        val_acc_track = val_acc_track #[:epoch]
+        loss_track = loss_track  # [:epoch]
+        val_acc_track = val_acc_track  # [:epoch]
 
         return loss_track, val_acc_track, test_accuracy, early_stop
 
@@ -228,26 +233,26 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         pickle.dump(GraphCharacteristics, file)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Training Script')
-    parser.add_argument('--config', type=str, required=True, help='Config dict of the Graph')
-    parser.add_argument('--architecture', type=str, required=True, help='What model to run: [GCN, SAGE, GAT]')
-    parser.add_argument('--seed', type=int, required=True, help='reproducibility seed')
-    parser.add_argument('--timestamp', type=str, required=True, help='When has main been executed')
-    args = parser.parse_args()
-
-    # read in str()-representation to return actual dict-type
-    config = ast.literal_eval(args.config)
-
-    run_experiment(graph_config=config,
-                   architecture=args.architecture,
-                   seed=args.seed,
-                   ts=args.timestamp)
+    # parser = argparse.ArgumentParser(description='Training Script')
+    # parser.add_argument('--config', type=str, required=True, help='Config dict of the Graph')
+    # parser.add_argument('--architecture', type=str, required=True, help='What model to run: [GCN, SAGE, GAT]')
+    # parser.add_argument('--seed', type=int, required=True, help='reproducibility seed')
+    # parser.add_argument('--timestamp', type=str, required=True, help='When has main been executed')
+    # args = parser.parse_args()
+    #
+    # # read in str()-representation to return actual dict-type
+    # config = ast.literal_eval(args.config)
+    #
+    # run_experiment(graph_config=config,
+    #                architecture=args.architecture,
+    #                seed=args.seed,
+    #                ts=args.timestamp)
 
 
     # ---- for debugging ------
 
-     # from config import Scenarios
-     # run_experiment(graph_config=Scenarios.community_relevant,
-     #                 architecture="GCN",
-     #                 seed=1,
-     #                 ts="debug")
+     from config import Scenarios
+     run_experiment(graph_config=Scenarios.perfect,
+                     architecture="GCN",
+                     seed=1,
+                     ts="debug")

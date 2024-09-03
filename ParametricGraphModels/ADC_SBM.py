@@ -273,7 +273,7 @@ class ADC_SBM:
 
     def target_edge_counter(self):
         """
-        Count how many edges are between all targets.
+        Count how many edges are within and between all targets.
         :return: symmetric square matrix.
         """
         edges = self.Nx.edges(data=True)
@@ -281,6 +281,7 @@ class ADC_SBM:
         nt = self.y_out_dim
 
         counter = {i: {j: 0 for j in range(0, nt)} for i in range(0, nt)}
+        # {0: {0:_,1:_,2:_},1: {0:_,1:_,2:_}, 2: {0:_,1:_,2:_}} example for nt = 3
         for e in edges:
             i, j = (e[0:2])  # e = (1, 114, {'weight': 1.0})
             target_i = targets[i]
@@ -293,6 +294,33 @@ class ADC_SBM:
 
         df = pd.DataFrame(counter)
         return df
+
+    def edge_homophily(self):
+        """
+        Computes homophilly meassure from Lim et al. (2021)
+        :return:
+        """
+        G = self.Nx
+        total_neighbors = np.array([ngbhr[1] for ngbhr in list(G.degree())])
+        n = self.n_nodes
+        targets = g.y
+
+        same_label_neighbors = np.zeros(n, dtype=int)
+        labels = np.array(self.y)
+
+        for node in range(n):
+            neighbors = list(G.neighbors(node))
+            total_neighbors[node] = len(neighbors)
+            same_label_neighbors[node] = sum(
+                labels[neighbor] == labels[node] for neighbor in neighbors)
+
+        h_k = np.zeros(self.y_out_dim)
+        for tau in range(self.y_out_dim):
+            numerator = sum(same_label_neighbors[np.where(targets == tau)])
+            denominator = sum(total_neighbors[np.where(targets == tau)])
+            h_k[tau] = numerator/denominator
+        #return h_k
+
 
 
     def label_correlation(self):
@@ -571,26 +599,27 @@ def from_config(config:dict, rs = 26):
 if __name__ == "__main__":
     from config import Scenarios
 
-    g = from_config(Scenarios.community_relevant)
+    #g = from_config(Scenarios.community_relevant)
     #g.purity(fig_size=(7,7), group_by="Community", plot_it=False)
     #synthetic_split(MultiClassClassification.perfect_graph, [.7,.2,.1])
 
 
     # 1) ----------------- Set Params -----------------
-    community_sizes = [90, 140, 210, 160]  # 4 communities; fixed
+    community_sizes = [100, 100, 100]  # 4 communities; fixed
     n = sum(community_sizes)  # number of nodes (observations)
     b_communities = len(community_sizes)  # number of communities
-    m_features = 6  # number of numeric features; fixed
-    k_clusters = 6  # number of feature clusters; Overlap Scenario (over, under, match) 3,5,4
+    m_features = 2  # number of numeric features; fixed
+    k_clusters = 3  # number of feature clusters; Overlap Scenario (over, under, match) 3,5,4
     alpha, beta, lmbd = 2, 20, .5  # degree_correction params; fixed
-    br, wr = (.2, .2), (.5, .5)  # assortative and dis-assortative
+    br, wr = (.05, .05), (.5, .5)  # assortative and dis-assortative
 
     # 2) ------- Instantiate Class Object (Note: No graspy called yet!) ---------
     B = getB(m=b_communities, b_range=br, w_range=wr)  # get Connection Matrix
+
     g = ADC_SBM(community_sizes=community_sizes, B=B)  # instantiate class
 
     # 3) ----------------- Generate the actual Graph -----------------
-    g.correct_degree(alpha=alpha, beta=beta, lmbd=lmbd, distribution="exp")
+    # g.correct_degree(alpha=alpha, beta=beta, lmbd=lmbd, distribution="exp")
     g.gen_graph()
 
     # 4) ----------------- Generate Node Features -----------------
@@ -598,7 +627,7 @@ if __name__ == "__main__":
     centroids = np.random.multivariate_normal(np.repeat(0, m_features),  # mu
                                          getB(m_features,
                                               (0, 0),  # Covariance
-                                              (30, 30)),  # Variance (relevant for cluster separation)
+                                              (6, 6)),  # Variance (relevant for cluster separation)
                                          k_clusters)  # n
     # centroids will be an array of size kxm
     # if the centroid variance is low and within-variance high,
@@ -607,7 +636,7 @@ if __name__ == "__main__":
     g.set_x(n_c=k_clusters,  # number of clusters
             mu=[tuple(point) for point in centroids],  # k tuple of coordinates in m-dimensional space
             sigma=[getB(m_features, (0, 0),  # Covariance
-                                    (1.5, 1.5))  # Variance (relevant for cluster separation)
+                                    (1, 1))  # Variance (relevant for cluster separation)
                    for _ in range(k_clusters)],
             # similar covariance matrix for each centroid
             #w=np.random.dirichlet(np.ones(k_clusters), size=1).flatten()
@@ -615,8 +644,7 @@ if __name__ == "__main__":
             )
 
     # 5) ----------------- Generate Targets -----------------
-    ny = 5  # number of target classes; fixed
-    nf = m_features + 1 + b_communities  # number of relevant features (community and degree considered!)
+    ny = 3  # number of target classes; fixed
 
     omega = getW(m_targets=ny, n_communities=b_communities, j_features=m_features,
                  k_clusters=k_clusters, feature_info="cluster",
@@ -624,6 +652,7 @@ if __name__ == "__main__":
 
     g.set_y(task="multiclass", weights=omega, feature_info="cluster", eps=.5)
     g.split_data([.7,.2,.1])
-    g.set_Data_object()
-    print(g.purity())
 
+    es = g.Nx.edges(data=True)
+
+    print({(n, i) for n, i in g.Nx.neighbors(0)})
