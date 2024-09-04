@@ -301,9 +301,11 @@ class ADC_SBM:
         :return:
         """
         G = self.Nx
-        total_neighbors = np.array([ngbhr[1] for ngbhr in list(G.degree())])
+        total_neighbors = np.array([tpl[1] for tpl in list(G.degree())])  # tpl: (node, ngbhr)
         n = self.n_nodes
-        targets = g.y
+        labs = self.community_labels
+        C = np.array(self.community_sizes)  # (_,)
+        n_classes = C.shape[0]
 
         same_label_neighbors = np.zeros(n, dtype=int)
         labels = np.array(self.y)
@@ -314,12 +316,16 @@ class ADC_SBM:
             same_label_neighbors[node] = sum(
                 labels[neighbor] == labels[node] for neighbor in neighbors)
 
-        h_k = np.zeros(self.y_out_dim)
-        for tau in range(self.y_out_dim):
-            numerator = sum(same_label_neighbors[np.where(targets == tau)])
-            denominator = sum(total_neighbors[np.where(targets == tau)])
-            h_k[tau] = numerator/denominator
-        #return h_k
+        h_k = np.zeros(n_classes)
+        for l in range(n_classes):
+            numerator = sum(same_label_neighbors[np.where(labs == l)])
+            denominator = sum(total_neighbors[np.where(labs == l)])
+            h_k[l] = numerator/denominator
+
+        h_hat = ((1/(n_classes-1)) *
+                 sum(np.maximum(np.zeros(n_classes),
+                                h_k - (C / n))))
+        return h_hat
 
 
 
@@ -498,7 +504,7 @@ def getW(m_targets, n_communities, j_features,
                       x_betas, community_betas))
 
 
-def from_config(config:dict, rs = 26):
+def from_config(config: dict, rs=26):
     """
     Generate entire graph from config dictionary.
     :param config: a dictionary with specified args
@@ -599,10 +605,8 @@ def from_config(config:dict, rs = 26):
 if __name__ == "__main__":
     from config import Scenarios
 
-    #g = from_config(Scenarios.community_relevant)
-    #g.purity(fig_size=(7,7), group_by="Community", plot_it=False)
-    #synthetic_split(MultiClassClassification.perfect_graph, [.7,.2,.1])
-
+    #g = from_config(Scenarios.community_relevant_heterophilic)
+    #print(g.edge_homophily())
 
     # 1) ----------------- Set Params -----------------
     community_sizes = [100, 100, 100]  # 4 communities; fixed
@@ -611,7 +615,7 @@ if __name__ == "__main__":
     m_features = 2  # number of numeric features; fixed
     k_clusters = 3  # number of feature clusters; Overlap Scenario (over, under, match) 3,5,4
     alpha, beta, lmbd = 2, 20, .5  # degree_correction params; fixed
-    br, wr = (.05, .05), (.5, .5)  # assortative and dis-assortative
+    br, wr = (.3, .3), (.6, .6)  # assortative and dis-assortative
 
     # 2) ------- Instantiate Class Object (Note: No graspy called yet!) ---------
     B = getB(m=b_communities, b_range=br, w_range=wr)  # get Connection Matrix
@@ -651,8 +655,7 @@ if __name__ == "__main__":
                  w_x=2, w_com=1)
 
     g.set_y(task="multiclass", weights=omega, feature_info="cluster", eps=.5)
-    g.split_data([.7,.2,.1])
 
-    es = g.Nx.edges(data=True)
+    print(g.edge_homophily())
 
-    print({(n, i) for n, i in g.Nx.neighbors(0)})
+
