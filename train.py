@@ -8,6 +8,7 @@ import torch.nn
 # Custom Modules
 from GNN_Models import *  # here the models are stored
 from ParametricGraphModels.ADC_SBM import from_config
+from tqdm import tqdm
 
 def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     """
@@ -159,7 +160,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         epochs_without_improvement = 0
         pseudo_break = False
 
-        for epoch in range(n_epochs):
+        for epoch in tqdm(range(n_epochs)):
             loss = train(data)
             val_acc = test(data, data.val_mask)
             val_acc_track[epoch] = val_acc
@@ -209,7 +210,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
 
     # Linux vs Windows
     base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"
-    #base = r""
+    #base = r"/home/zogaj/MA/ExperimentLogs"  # Linux Server
 
     final_path = os.path.join(base, ts, architecture, graph_config["name"])
     final_gchar_path = os.path.join(base, ts, "GraphCharacteristics", graph_config["name"])
@@ -233,26 +234,26 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         pickle.dump(GraphCharacteristics, file)
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser(description='Training Script')
-    # parser.add_argument('--config', type=str, required=True, help='Config dict of the Graph')
-    # parser.add_argument('--architecture', type=str, required=True, help='What model to run: [GCN, SAGE, GAT]')
-    # parser.add_argument('--seed', type=int, required=True, help='reproducibility seed')
-    # parser.add_argument('--timestamp', type=str, required=True, help='When has main been executed')
-    # args = parser.parse_args()
-    #
-    # # read in str()-representation to return actual dict-type
-    # config = ast.literal_eval(args.config)
-    #
-    # run_experiment(graph_config=config,
-    #                architecture=args.architecture,
-    #                seed=args.seed,
-    #                ts=args.timestamp)
+    parser = argparse.ArgumentParser(description='Training Script')
+    parser.add_argument('--config', type=str, required=True, help='Config dict of the Graph')
+    parser.add_argument('--architecture', type=str, required=True, help='What model to run: [GCN, SAGE, GAT]')
+    parser.add_argument('--seed', type=int, required=True, help='reproducibility seed')
+    parser.add_argument('--timestamp', type=str, required=True, help='When has main been executed')
+    args = parser.parse_args()
+
+    # read in str()-representation to return actual dict-type
+    config = ast.literal_eval(args.config)
+
+    run_experiment(graph_config=config,
+                   architecture=args.architecture,
+                   seed=args.seed,
+                   ts=args.timestamp)
 
 
     # ---- for debugging ------
 
-     from config import Scenarios
-     run_experiment(graph_config=Scenarios.perfect,
-                     architecture="GCN",
-                     seed=1,
-                     ts="debug")
+    # from config import Scenarios
+    # run_experiment(graph_config=Scenarios.perfect,
+    #                 architecture="GCN",
+    #                 seed=1,
+    #                 ts="debug")

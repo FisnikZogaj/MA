@@ -436,7 +436,7 @@ class ADC_SBM:
                        div(grouped_counts_c.sum(axis=1), axis=0).
                        apply(gini, axis=1)
                 )
-            return {"centroids": pure_df1,
+            return {"cluster": pure_df1,
                     "community": pure_df_2}
 
         if metric == "entropy":
@@ -451,7 +451,7 @@ class ADC_SBM:
                        apply(entropy, axis=1)
                 )
 
-            return {"centroids": pure_df_3,
+            return {"cluster": pure_df_3,
                     "community": pure_df_4}
 
 

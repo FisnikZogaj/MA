@@ -7,7 +7,7 @@ from config import Scenarios
 
 fail_count = 0
 base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"  # my machine
-# base = r"" # Linux server
+# base = r"/home/zogaj/MA/ExperimentLogs"  # Linux Server
 
 def run_job(config: dict, architecture: str, seed: int, timestamp: str):
     """
@@ -21,7 +21,7 @@ def run_job(config: dict, architecture: str, seed: int, timestamp: str):
     """
 
     python = r'C:\Users\zogaj\PycharmProjects\MA\venv\Scripts\python.exe' # my machine
-    #python = r'\venv\Scripts\python.exe' # linux server
+    #python = r'/home/zogaj/MA/genv/bin/python'  # Linux server
     config_str = str(config)  # Convert dictionary to string for argparse
     command = [
         python, 'train.py',  # The script to run on the version of python specified
@@ -51,7 +51,7 @@ def run_job_safe(args, counter, lock, total_num_of_jobs):
 if __name__ == '__main__':
     start_time = time.time()
     # Note: range determines the number of Monte-Carlo runs
-    seeds = list(range(1, 30))
+    seeds = list(range(1, 3))
     arguments = Scenarios()
 
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S").translate(str.maketrans({" ": "-", ":": "-"}))
