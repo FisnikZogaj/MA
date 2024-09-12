@@ -14,6 +14,7 @@ import random
 from scipy.stats import chi2_contingency
 from sklearn.metrics import normalized_mutual_info_score
 from sklearn.metrics import adjusted_rand_score
+from statsmodels.multivariate.manova import MANOVA
 
 #print(np.__version__) # potential errors with "pybind11" when numpy.__version__ == 2.__
 
@@ -65,6 +66,7 @@ class ADC_SBM:
         self.x_tsne = None
         self.y = None
         self.y_out_dim = None # either 1 when regression or k labels when not
+        self.m = None
 
         self.name = None
 
@@ -154,6 +156,7 @@ class ADC_SBM:
 
         self.x = data
         self.cluster_labels = component_labels
+        self.m = data.shape[1]
 
 
     def reduce_dim_x(self, rs=26):
@@ -163,6 +166,8 @@ class ADC_SBM:
         """
         tsne = TSNE(n_components=2, random_state=rs)
         self.x_tsne = tsne.fit_transform(self.x)
+
+        return self.cluster_labels, self.x_tsne
 
 
     def set_y(self, task: str, weights: np.array, feature_info="cluster", eps:float=1):
@@ -297,29 +302,27 @@ class ADC_SBM:
 
     def edge_homophily(self):
         """
-        Computes homophilly meassure from Lim et al. (2021)
+        Computes homophilly meassure from Lim et al. (2021).
         :return:
         """
         G = self.Nx
         total_neighbors = np.array([tpl[1] for tpl in list(G.degree())])  # tpl: (node, ngbhr)
         n = self.n_nodes
-        labs = self.community_labels
-        C = np.array(self.community_sizes)  # (_,)
-        n_classes = C.shape[0]
+        C = np.array(self.y)  # (_,)
+        n_classes = self.y_out_dim #  = tau
 
         same_label_neighbors = np.zeros(n, dtype=int)
         labels = np.array(self.y)
 
         for node in range(n):
             neighbors = list(G.neighbors(node))
-            total_neighbors[node] = len(neighbors)
-            same_label_neighbors[node] = sum(
-                labels[neighbor] == labels[node] for neighbor in neighbors)
+            # total_neighbors[node] = len(neighbors)
+            same_label_neighbors[node] = sum(labels[neighbor] == labels[node] for neighbor in neighbors)
 
         h_k = np.zeros(n_classes)
         for l in range(n_classes):
-            numerator = sum(same_label_neighbors[np.where(labs == l)])
-            denominator = sum(total_neighbors[np.where(labs == l)])
+            numerator = sum(same_label_neighbors[np.where(labels == l)])
+            denominator = sum(total_neighbors[np.where(labels == l)])
             h_k[l] = numerator/denominator
 
         h_hat = ((1/(n_classes-1)) *
@@ -327,6 +330,29 @@ class ADC_SBM:
                                 h_k - (C / n))))
         return h_hat
 
+
+    def manova_x(self):
+        """
+
+        :return: Wilks lambda in [0, 1]
+        """
+        data = np.concatenate((self.x, self.y.reshape(-1, 1)), axis=1)
+        df = pd.DataFrame(data, columns=[f"X{i + 1}" for i in range(self.m)] + ['Group'])
+        df['Group'] = df['Group'].astype(int)
+
+        formula = " + ".join(df.columns[:-1]) + " ~ " + df.columns[-1]
+        manova = MANOVA.from_formula(formula, data=df)
+        manova_result = manova.mv_test()
+
+        # manova_result.results['Group']['stat']:
+        # Wilks' lambda  0.946569  6, 992.0  9.332549  0.0
+        # Pillai's trace 0.053431  6, 992.0  9.332549  0.0
+        # ...
+
+        wilks_lambda = manova_result.results['Group']['stat'].iloc[0, 0]
+        p_value = manova_result.results['Group']['stat'].iloc[0, -1]
+
+        return np.round(wilks_lambda, 3), np.round(p_value, 3)
 
 
     def label_correlation(self):

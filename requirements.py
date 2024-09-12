@@ -14,7 +14,6 @@ def check_version(package, actual_version, expected_version):
     else:
         print(f"{package}: False, actual version is {actual_version}")
 
-# Define the expected versions
 expected_versions = {
     "hyppo": "0.1.3",
     "future": "1.0.0",
@@ -24,6 +23,7 @@ expected_versions = {
     "torch_geometric": "2.6.0",
     "torch": "2.3.1+cpu",
     "networkx": "3.3"
+    "statsmodels: 0.14"
 }
 
 # Check each package
