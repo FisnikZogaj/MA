@@ -102,12 +102,13 @@ if __name__ == '__main__':
     manager = mp.Manager()
     counter = manager.Value('i', 0)
     lock = manager.Lock()
-    max_concurrent_jobs = 4
+    max_concurrent_jobs = 2
 
     with mp.Pool(processes=max_concurrent_jobs) as pool:
         results = [pool.apply_async(run_job_safe, args=(arg, counter, lock, total_num_of_jobs)) for arg in job_args]
+        input("Ready?")
         for result in results:
-            result.get()  # Ensure each result is processed
+            result.get()  #  Ensure each result is processed
 
     end_time = time.time()
     elapsed_time = end_time - start_time

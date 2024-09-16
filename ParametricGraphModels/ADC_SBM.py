@@ -170,7 +170,7 @@ class ADC_SBM:
         return self.cluster_labels, self.x_tsne
 
 
-    def set_y(self, task: str, weights: np.array, feature_info="cluster", eps:float=1):
+    def set_y(self, task: str, weights: np.array, eps:float=1):
         """
         :param task: ["regression","binary","multiclass"]
         :param weights: array of numbers specifying the importance of each feature
@@ -190,23 +190,6 @@ class ADC_SBM:
             raise ValueError("Invalid task")
 
         self.task = task
-        scaler = StandardScaler()
-
-        if feature_info == "number": # use x feature as are
-            x_continuous = scaler.fit_transform(
-                np.concatenate((self.x,
-                                self.degrees.reshape(-1, 1)), axis=1)
-            )
-
-        elif feature_info == "cluster": # use cluster dummies
-            pass
-            #x_continuous = np.concatenate(
-            #    (scaler.fit_transform(self.degrees.reshape(-1, 1)),  # it's not continuous anymore, but it's just a name
-            #    pd.get_dummies(self.cluster_labels).to_numpy(dtype=np.float16)), axis=1
-            #)
-
-        else:
-            raise ValueError("feature_info must either be 'number' or 'cluster'.")
 
         feat_mat = np.hstack(
             (pd.get_dummies(self.cluster_labels).to_numpy(dtype=np.float16),
@@ -217,7 +200,7 @@ class ADC_SBM:
         beta = np.ones(weights.shape) * weights
 
         if task == "regression":
-            error = np.random.normal(0, eps, self.n_nodes)
+            error = np.random.normal(0, eps, self.n_nodes)  # eps uses SD, not VAR
             self.y = np.dot(feat_mat, beta) + error
             self.y_out_dim = 1
 
@@ -308,7 +291,7 @@ class ADC_SBM:
         G = self.Nx
         total_neighbors = np.array([tpl[1] for tpl in list(G.degree())])  # tpl: (node, ngbhr)
         n = self.n_nodes
-        C = np.array(self.y)  # (_,)
+        n_y_k = np.bincount(self.y)  # (_,)
         n_classes = self.y_out_dim #  = tau
 
         same_label_neighbors = np.zeros(n, dtype=int)
@@ -323,11 +306,12 @@ class ADC_SBM:
         for l in range(n_classes):
             numerator = sum(same_label_neighbors[np.where(labels == l)])
             denominator = sum(total_neighbors[np.where(labels == l)])
-            h_k[l] = numerator/denominator
+            h_k[l] = numerator/denominator  # indexed 0, 1, ..., tau
+
 
         h_hat = ((1/(n_classes-1)) *
                  sum(np.maximum(np.zeros(n_classes),
-                                h_k - (C / n))))
+                                h_k - (n_y_k / n))))
         return h_hat
 
 

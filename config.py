@@ -230,8 +230,8 @@ class Scenarios:
         "name": "perfect",
         "task": "multiclass",
 
-        "community_sizes": [50, 50, 50],  # fixed
-        "cluster_sizes": [50, 50, 50],  # same as com_size -> overlap
+        "community_sizes": [333, 333, 333],
+        "cluster_sizes": [333, 333, 333],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4,
         "alpha": 2, "beta": 20, "lmbd": .5,
@@ -242,7 +242,7 @@ class Scenarios:
         "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
         "within_clust_variance_range": (1, 1),
 
-        "within_clust_covariance_range": (0, .0),  # not important; fixed
+        "within_clust_covariance_range": (0, 0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
 
         "n_targets": 3,
@@ -251,12 +251,12 @@ class Scenarios:
         "x_importance": 6,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
-        "community_importance": 6,  # this scale shouldn't be interpreted analog to x and degree
+        "community_importance": 4,  # this scale shouldn't be interpreted analog to x and degree
         "community_importance_exponent": 1,
         "model_error": 2,
         "splitweights": [.7, .2, .1]
 
-    }
+    }  # perfect
 
     illustrative_2 = {
         # Well seperated by community-connectivity + homophily. But irrelevant features, with poor cluster separation.
@@ -264,8 +264,8 @@ class Scenarios:
         "name": "community_relevant",
         "task": "multiclass",
 
-        "community_sizes": [50, 50, 50],
-        "cluster_sizes": [70, 60, 20],
+        "community_sizes": [333, 333, 333],
+        "cluster_sizes": [233, 333, 433],
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
@@ -285,12 +285,12 @@ class Scenarios:
         "x_importance": 1,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
-        "community_importance": 6,  # diag entries
+        "community_importance": 4,  # diag entries
         "community_importance_exponent": 1,
-        "model_error": 3,
+        "model_error": 2,
         "splitweights": [.7, .2, .1]
 
-    }
+    }  # community relevant
 
     illustrative_3 = {
 
@@ -300,14 +300,14 @@ class Scenarios:
         "name": "community_relevant_heterophilic",
         "task": "multiclass",
 
-        "community_sizes": [50, 50, 50],
-        "cluster_sizes": [70, 60, 20],   # same as com_size -> overlap
+        "community_sizes": [333, 333, 333],
+        "cluster_sizes": [233, 333, 433],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
 
-        "between_com_prob_range": (.5, .5),
-        "within_com_prob_range": (.25, .25),
+        "between_com_prob_range": (.4, .4),
+        "within_com_prob_range": (.5, .5),
 
         "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
         "within_clust_variance_range": (1, 1),
@@ -321,12 +321,12 @@ class Scenarios:
         "x_importance": 1,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
-        "community_importance": 6,  # diag entries
+        "community_importance": 4,  # diag entries
         "community_importance_exponent": 1,
-        "model_error": 3,
+        "model_error": 2,
         "splitweights": [.7, .2, .1]
 
-    }
+    }  # community_relevant_heterophilic
 
     illustrative_4 = {
         # Well seperated by features-cluster with relevant parameters.
@@ -335,14 +335,14 @@ class Scenarios:
         "name": "cluster_relevant",
         "task": "multiclass",
 
-        "community_sizes": [70, 60, 20],  # fixed
-        "cluster_sizes": [50, 50, 50],  # same as com_size -> overlap
+        "community_sizes": [333, 333, 333],
+        "cluster_sizes": [233, 333, 433],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
 
-        "between_com_prob_range": (.5, .5),
-        "within_com_prob_range": (.25, .25),
+        "between_com_prob_range": (.4, .4),
+        "within_com_prob_range": (.5, .5),
 
         "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
         "within_clust_variance_range": (1, 1),
@@ -353,15 +353,15 @@ class Scenarios:
         "n_targets": 3,
         "degree_importance": 1,
 
-        "x_importance": 6,
+        "x_importance": 4,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
         "community_importance": 1,  # this scale shouldn't be interpreted analog to x and degree
         "community_importance_exponent": 1,
-        "model_error": 3,
+        "model_error": 2,
         "splitweights": [.7, .2, .1]
 
-    }
+    }  # cluster_relevant
 
     illustrative_5 = {
         # Feature cluster explains target well, but clusters are not well seperated.
@@ -370,17 +370,17 @@ class Scenarios:
         "name": "non_seperated_cluster_relevant",
         "task": "multiclass",
 
-        "community_sizes": [70, 60, 20],  # fixed
-        "cluster_sizes": [50, 50, 50],  # same as com_size -> overlap
+        "community_sizes": [333, 333, 333],
+        "cluster_sizes": [233, 333, 433],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
 
-        "between_com_prob_range": (.05, .05),
-        "within_com_prob_range": (.4, .4),  # heterophilic
+        "between_com_prob_range": (.4, .4),
+        "within_com_prob_range": (.5, .5),  # heterophilic
 
         "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
-        "within_clust_variance_range": (4, 4),
+        "within_clust_variance_range": (5, 5),
 
         "within_clust_covariance_range": (0, .0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
@@ -388,29 +388,29 @@ class Scenarios:
         "n_targets": 3,
         "degree_importance": 0,
 
-        "x_importance": 6,
+        "x_importance": 4,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
         "community_importance": 1,  # this scale shouldn't be interpreted analog to x and degree
         "community_importance_exponent": 1,
-        "model_error": 3,
+        "model_error": 2,
         "splitweights": [.7, .2, .1]
 
-    }
+    }  # non_seperated_cluster_relevant
 
     illustrative_6 = {
 
         "name": "noise",
         "task": "multiclass",
 
-        "community_sizes": [70, 40, 20],  # fixed
-        "cluster_sizes": [20, 40, 70],  # same as com_size -> overlap
+        "community_sizes": [333, 333, 333],
+        "cluster_sizes": [233, 333, 433],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4,
         "alpha": 2, "beta": 20, "lmbd": .5,
 
-        "between_com_prob_range": (.5, .5),
-        "within_com_prob_range": (.25, .25),  # within_range > between -> assortative
+        "between_com_prob_range": (.4, .4),
+        "within_com_prob_range": (.5, .5),  # within_range > between -> assortative
 
         "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
         "within_clust_variance_range": (5, 5),
@@ -424,13 +424,12 @@ class Scenarios:
         "x_importance": 1,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
-        "community_importance": 1.5,  # this scale shouldn't be interpreted analog to x and degree
-        "community_importance_exponent": 1,
-        "model_error": 9,
+        "community_importance": 2,  # this scale shouldn't be interpreted analog to x and degree
+        "community_importance_exponent": 2,
+        "model_error": 6,
         "splitweights": [.7, .2, .1]
 
-    }
-
+    }  # noise
     # ------ Hyper parameters across all models -------
 
     hyperparams = {
