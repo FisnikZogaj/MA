@@ -9,6 +9,8 @@ import torch.nn
 from GNN_Models import *  # here the models are stored
 from ParametricGraphModels.ADC_SBM import from_config
 from tqdm import tqdm
+import xgboost as xgb
+from xgboost import XGBClassifier
 
 def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     """
@@ -37,7 +39,6 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     drp2 = .1
     attention_heads = 8
 
-
     # Linux vs Windows
     base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"
     #base = r"/home/zogaj/MA/ExperimentLogs"  # Linux Server
@@ -63,10 +64,11 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
                             heads=attention_heads,
                             output_channels=num_targets)  # initialize here
 
-    else:
-        raise ValueError(f"Model Architecture must be one of [GCN, SAGE, GAT]. Received: '{architecture}'.")
+    else:  # architecture == "XGBoost"
+        pass
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lrn_rt, weight_decay=wgth_dcy)
+    # else:
+    #     raise ValueError(f"Model Architecture must be one of [GCN, SAGE, GAT, XGBoost]. Received: '{architecture}'.")
 
     if g.y_out_dim > 2:
         criterion = torch.nn.CrossEntropyLoss()
@@ -208,40 +210,55 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         return loss_track, val_acc_track, test_accuracy, early_stop
 
     if architecture in ["GCN", "GAT", "SAGE"]:
+        optimizer = torch.optim.Adam(model.parameters(), lr=lrn_rt, weight_decay=wgth_dcy)
         loss_track, val_acc_track, test_accuracy, final_epoch = (
             full_training_early_stop(g.DataObject, 100, 25))
-    else:
+
+    else:  # XGBoost, not Manually specified
         model = XGBClassifier(
             objective='multi:softmax',
             num_class=g.y_out_dim,
             use_label_encoder=False,
-            eval_metric='mlogloss',
-            n_estimators=100,  # Number of boosting rounds
+            eval_metric=['mlogloss', "merror"],
+            n_estimators=100,  # Number of boosting rounds (epochs)
             learning_rate=lrn_rt,  # Step size shrinkage
-            max_depth=6,  # Maximum depth of trees
+            max_depth=10,  # Maximum depth of trees
             min_child_weight=3,  # Minimum sum of instance weight
             subsample=0.8,  # Fraction of samples
             colsample_bytree=0.8,  # Fraction of features
-            gamma=1  # Minimum loss reduction to split a node
+            gamma=1,  # Minimum loss reduction to split a node
+            verbosity=0
         )
 
         X = g.DataObject.x
         y = g.DataObject.y
+
         train_mask = g.DataObject.train_mask
         test_mask = g.DataObject.test_mask
+        val_mask = g.DataObject.val_mask
+        eval_set = [(X[train_mask], y[train_mask]), (X[val_mask], y[val_mask])]  # 0, 1 index
 
-        model.fit(X[train_mask], y[train_mask])
+        model.fit(X[train_mask], y[train_mask], eval_set=eval_set, verbose=False)
+        evals_result = model.evals_result()
         y_pred = model.predict(X[test_mask])
-        test_accuracy = np.mean(y_pred == y[train_mask])
 
-        # eval_set = [(X[train_mask], y_train), (X_test, y_test)]
-        # model.fit(X_train, y_train, eval_set=eval_set, verbose=True)
-        # evals_result = model.evals_result()
-        # print("Training loss:\n", evals_result['validation_0']['mlogloss'])
-        # print("Validation loss:\n", evals_result['validation_1']['mlogloss'])
+        test_accuracy = np.mean(y_pred == np.array(y[test_mask]))
+        loss_track = evals_result['validation_0']['mlogloss']
+        val_acc_track = 1 - np.array(evals_result['validation_1']['merror'])  # accuracy
+
+        counter = 0
+        final_epoch = 100
+        for i, e in enumerate(np.diff(val_acc_track)):
+            if e == 0:
+                counter += 1
+            elif counter > 10:
+                final_epoch = i
+                break
+            else:
+                counter = 0
 
     print("Training successfully completed!",  "\n")
-    print("@ ", architecture, "+", graph_config["name"], "+", seed, "->", final_path, "\n")
+
     # ---------------- Save all results -----------------
 
     train_output = {
@@ -256,23 +273,32 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
 
     output_path = os.path.join(final_path, f"output{seed}.pkl")
     with open(output_path, 'wb') as file:
+        print("@ ", architecture, "+", graph_config["name"], "+", seed, "->", output_path, "\n")
         pickle.dump(train_output, file)
 
+
     # ---- Further save Graph characteristics here ----
-    # GraphCharacteristics = {
-    #     "tec": g.target_edge_counter(),
-    #     "pur": g.purity(),
-    #     "lab_corr": g.label_correlation()
-    # }
-    #
-    # output_path = os.path.join(final_gchar_path, f"output{seed}.pkl")
-    # with open(output_path, 'wb') as file:
-    #     pickle.dump(GraphCharacteristics, file)
+    # If already exists, pass
+    GraphCharacteristics = {
+        "h_hat": g.edge_homophily(),
+        "wilks_lambda": g.manova_x()
+        # "tec": g.target_edge_counter(),
+        # "pur": g.purity(),
+        # "lab_corr": g.label_correlation()
+    }
+
+    output_path = os.path.join(final_gchar_path, f"output{seed}.pkl")
+    if not os.path.exists(output_path):
+        with open(output_path, 'wb') as file:
+            pickle.dump(GraphCharacteristics, file)
+            print("@ ", graph_config["name"], "+", seed, "->", output_path, "\n")
+    else:
+        pass
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training Script')
     parser.add_argument('--config', type=str, required=True, help='Config dict of the Graph')
-    parser.add_argument('--architecture', type=str, required=True, help='What model to run: [GCN, SAGE, GAT]')
+    parser.add_argument('--architecture', type=str, required=True, help='What model to run: [GCN, SAGE, GAT, "XGBoost]')
     parser.add_argument('--seed', type=int, required=True, help='reproducibility seed')
     parser.add_argument('--timestamp', type=str, required=True, help='When has main been executed')
     args = parser.parse_args()
@@ -284,7 +310,6 @@ if __name__ == "__main__":
                    architecture=args.architecture,
                    seed=args.seed,
                    ts=args.timestamp)
-
 
     # ---- for debugging ------
 

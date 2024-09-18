@@ -57,7 +57,7 @@ if __name__ == '__main__':
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S").translate(str.maketrans({" ": "-", ":": "-"}))
     # List of arguments for the jobs; Permutation of all settings
     job_args = [(c, a, s, ts) for c in arguments
-                for a in ["GCN", "SAGE", "GAT"]
+                for a in ["GCN", "SAGE", "GAT", "XGBoost"]
                 for s in seeds]
 
     total_num_of_jobs = len(job_args)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     subdir_path = os.path.join(base, ts)
     os.makedirs(subdir_path, exist_ok=True)
 
-    for arch in ["GCN", "SAGE", "GAT"]:
+    for arch in ["GCN", "SAGE", "GAT", "XGBoost"]:
         for graphtype in arguments.list_of_scenarios:
             arch_path = os.path.join(subdir_path, arch)
             graphtype_path = os.path.join(arch_path, graphtype)
@@ -106,7 +106,6 @@ if __name__ == '__main__':
 
     with mp.Pool(processes=max_concurrent_jobs) as pool:
         results = [pool.apply_async(run_job_safe, args=(arg, counter, lock, total_num_of_jobs)) for arg in job_args]
-        input("Ready?")
         for result in results:
             result.get()  #  Ensure each result is processed
 

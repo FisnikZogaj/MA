@@ -1,8 +1,6 @@
 import torch
 from torch_geometric.nn import GATConv, SAGEConv, GCNConv
 import torch.nn.functional as F
-import xgboost as xgb
-from xgboost import XGBClassifier
 # Note: softmax at the end of each forward pass not necessary because CLE expects raw scores.
 
 # ------------------------------------------------------------------

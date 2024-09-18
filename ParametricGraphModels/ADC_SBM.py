@@ -578,7 +578,7 @@ def from_config(config: dict, rs=26):
                      w_x=x_importance, w_com=community_importance)
 
 
-    g.set_y(task=config["task"], weights=omega, feature_info="cluster", eps=config["model_error"])
+    g.set_y(task=config["task"], weights=omega, eps=config["model_error"])
 
     g.split_data(config["splitweights"])  # Data must be split, before creating the object !
     g.set_Data_object()

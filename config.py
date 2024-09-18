@@ -5,216 +5,6 @@ import numpy as np
 # Note that for Community or cluster relevance, we assign equal sizes accordingly.
 class Scenarios:
 
-    perfect = {
-        # Well seperated by features and community-connectivity (nodes from different communities are not likely, to
-        # contribute to nodes from other communities, due to sparse connections).
-        # n_com = n_clust = n_target = 4
-
-        "name": "perfect",
-        "task": "multiclass",
-
-        "community_sizes": [70, 230, 130, 240, 140, 90], # fixed
-        "cluster_sizes": [70, 230, 130, 240, 140, 90], # same as com_size -> overlap
-        "m_features": 6,
-        # "k_clusters": 4, determined by "cluster_size"
-        "alpha": 2, "beta": 20, "lmbd": .5,
-
-        "between_com_prob_range": (.1, .1),
-        "within_com_prob_range": (.5, .5), # within_range > between -> assortative
-
-        "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
-        "within_clust_variance_range": (1, 1),
-
-        "within_clust_covariance_range": (0, .0), # not important; fixed
-        "centroid_covariance_range": (0, 0), # not important; fixed
-
-        "n_targets": 5,
-        "degree_importance": 1, # no meaningfull interpretation
-
-        "x_importance": 6,
-        "feature_info": "cluster",
-        # "number" or "cluster": use numeric values of x right away or dummies for cluster
-
-        "community_importance": 6, # this scale shouldn't be interpreted analog to x and degree
-        "community_importance_exponent": 1,
-        "model_error": 3,
-        "splitweights": [.7, .2, .1]
-
-    }
-
-    community_relevant = {
-        # Well seperated by community-connectivity. But irrelevant features, with poor cluster separation.
-
-        "name": "community_relevant",
-        "task": "multiclass",
-
-        "community_sizes": [150, 150, 150, 150, 150, 150],  # fixed
-        "cluster_sizes": [70, 230, 130, 240, 140, 90],  # same as com_size -> overlap
-        "m_features": 6,
-        # "k_clusters": 4, determined by "cluster_size"
-        "alpha": 2, "beta": 20, "lmbd": .5,
-
-        "between_com_prob_range": (.1, .1),
-        "within_com_prob_range": (.5, .5),  # within_range > between -> assortative
-
-        "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
-        "within_clust_variance_range": (5, 5),
-
-        "within_clust_covariance_range": (0, 0),  # not important; fixed
-        "centroid_covariance_range": (0, 0),  # not important; fixed
-
-        "n_targets": 5,
-        "degree_importance": 1,  # no meaningfully interpretation
-
-        "x_importance": 1,
-        "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
-
-        "community_importance": 6,  # diag entries
-        "community_importance_exponent": 1,
-        "model_error": 3,
-        "splitweights": [.7, .2, .1]
-
-    }
-
-    cluster_relevant = {
-        # Well seperated by features-cluster with relevant parameters.
-        # However, no edge clustering of edges and no relevance of community belonging.
-
-        "name": "cluster_relevant",
-        "task": "multiclass",
-
-        "community_sizes": [70, 230, 130, 240, 140, 90],  # fixed
-        "cluster_sizes": [150, 150, 150, 150, 150, 150],  # same as com_size -> overlap
-        "m_features": 6,
-        # "k_clusters": 4, determined by "cluster_size"
-        "alpha": 2, "beta": 20, "lmbd": .5,
-
-        "between_com_prob_range": (.5, .5),
-        "within_com_prob_range": (.25, .25), # heterophilic
-
-        "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
-        "within_clust_variance_range": (1, 1),
-
-        "within_clust_covariance_range": (0, .0),  # not important; fixed
-        "centroid_covariance_range": (0, 0),  # not important; fixed
-
-        "n_targets": 5,
-        "degree_importance": 1,
-
-        "x_importance": 6,
-        "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
-
-        "community_importance": 1,  # this scale shouldn't be interpreted analog to x and degree
-        "community_importance_exponent": 1,
-        "model_error": 3,
-        "splitweights": [.7, .2, .1]
-
-    }
-
-    noise = {
-
-            "name": "noise",
-            "task": "multiclass",
-
-            "community_sizes": [70, 230, 130, 240, 140, 90],  # fixed
-            "cluster_sizes": [150, 150, 150, 150, 150, 150], # same as com_size -> overlap
-            "m_features": 6,
-            # "k_clusters": 4,
-            "alpha": 2, "beta": 20, "lmbd": .5,
-
-            "between_com_prob_range": (.25, .25),
-            "within_com_prob_range": (.5, .5), # within_range > between -> assortative
-
-            "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
-            "within_clust_variance_range": (5, 5),
-
-            "within_clust_covariance_range": (0, .0), # not important; fixed
-            "centroid_covariance_range": (0, 0), # not important; fixed
-
-            "n_targets": 5,
-            "degree_importance": 1,
-
-            "x_importance": 1.5,
-            "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
-
-            "community_importance": 1.5, # this scale shouldn't be interpreted analog to x and degree
-            "community_importance_exponent": 1,
-            "model_error": 10,
-            "splitweights": [.7, .2, .1]
-
-        }
-
-    community_relevant_heterophilic = {
-
-        # Relevant community (in terms of parameter) but heterophilic graph.
-        # Features are mildly relevant.
-
-        "name": "community_relevant_heterophilic",
-        "task": "multiclass",
-
-        "community_sizes": [150, 150, 150, 150, 150, 150],  # fixed
-        "cluster_sizes": [70, 230, 130, 240, 140, 90],  # same as com_size -> overlap
-        "m_features": 6,
-        # "k_clusters": 4, determined by "cluster_size"
-        "alpha": 2, "beta": 20, "lmbd": .5,
-
-        "between_com_prob_range": (.5, .5),
-        "within_com_prob_range": (.25, .25),  # within_range > between -> assortative
-
-        "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
-        "within_clust_variance_range": (5, 5),
-
-        "within_clust_covariance_range": (0, 0),  # not important; fixed
-        "centroid_covariance_range": (0, 0),  # not important; fixed
-
-        "n_targets": 5,
-        "degree_importance": 1,  # no meaningfully interpretation
-
-        "x_importance": 2,
-        "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
-
-        "community_importance": 6,  # diag entries
-        "community_importance_exponent": 1,
-        "model_error": 3,
-        "splitweights": [.7, .2, .1]
-
-    }
-
-    non_seperated_cluster_relevant = {
-        # Feature cluster explains target well, but clusters are not well seperated.
-        # Communities are well seperated, but not really relevant.
-
-        "name": "non_seperated_cluster_relevant",
-        "task": "multiclass",
-
-        "community_sizes": [70, 230, 130, 240, 140, 90],  # fixed
-        "cluster_sizes": [150, 150, 150, 150, 150, 150],  # same as com_size -> overlap
-        "m_features": 6,
-        # "k_clusters": 4, determined by "cluster_size"
-        "alpha": 2, "beta": 20, "lmbd": .5,
-
-        "between_com_prob_range": (.5, .5),
-        "within_com_prob_range": (.25, .25),  # heterophilic
-
-        "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
-        "within_clust_variance_range": (5, 5),
-
-        "within_clust_covariance_range": (0, .0),  # not important; fixed
-        "centroid_covariance_range": (0, 0),  # not important; fixed
-
-        "n_targets": 5,
-        "degree_importance": 1,
-
-        "x_importance": 6,
-        "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
-
-        "community_importance": 1,  # this scale shouldn't be interpreted analog to x and degree
-        "community_importance_exponent": 1,
-        "model_error": 3,
-        "splitweights": [.7, .2, .1]
-
-    }
-
     # ---- Not in the iterator for Monte-Carlo -----
     # Just for illustrative purposes
     # Well seperated centroids: centroid sigma = 6 & cluster sigma = 1
@@ -225,13 +15,13 @@ class Scenarios:
     # Model error: 2 for perfect, 9 for noise and 3 else
     # 3 and 5 questionable 
 
-    illustrative_1 = {
+    perfect = {
 
         "name": "perfect",
         "task": "multiclass",
 
-        "community_sizes": [333, 333, 333],
-        "cluster_sizes": [333, 333, 333],  # same as com_size -> overlap
+        "community_sizes": [200, 200, 200, 200, 200],
+        "cluster_sizes": [200, 200, 200, 200, 200],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4,
         "alpha": 2, "beta": 20, "lmbd": .5,
@@ -245,10 +35,10 @@ class Scenarios:
         "within_clust_covariance_range": (0, 0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
 
-        "n_targets": 3,
+        "n_targets": 5,
         "degree_importance": 0,  # irrelevant
 
-        "x_importance": 6,
+        "x_importance": 4,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
         "community_importance": 4,  # this scale shouldn't be interpreted analog to x and degree
@@ -258,14 +48,14 @@ class Scenarios:
 
     }  # perfect
 
-    illustrative_2 = {
+    community_relevant = {
         # Well seperated by community-connectivity + homophily. But irrelevant features, with poor cluster separation.
 
         "name": "community_relevant",
         "task": "multiclass",
 
-        "community_sizes": [333, 333, 333],
-        "cluster_sizes": [233, 333, 433],
+        "community_sizes": [200, 200, 200, 200, 200],
+        "cluster_sizes": [100, 100, 300, 200, 300],
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
@@ -292,7 +82,7 @@ class Scenarios:
 
     }  # community relevant
 
-    illustrative_3 = {
+    community_relevant_heterophilic = {
 
         # Relevant community (in terms of parameter) but heterophilic graph.
         # Features are mildly relevant.
@@ -300,8 +90,8 @@ class Scenarios:
         "name": "community_relevant_heterophilic",
         "task": "multiclass",
 
-        "community_sizes": [333, 333, 333],
-        "cluster_sizes": [233, 333, 433],  # same as com_size -> overlap
+        "community_sizes": [200, 200, 200, 200, 200],
+        "cluster_sizes": [100, 100, 300, 200, 300],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
@@ -315,7 +105,7 @@ class Scenarios:
         "within_clust_covariance_range": (0, 0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
 
-        "n_targets": 3,
+        "n_targets": 5,
         "degree_importance": 0,  # no meaningfully interpretation
 
         "x_importance": 1,
@@ -328,15 +118,15 @@ class Scenarios:
 
     }  # community_relevant_heterophilic
 
-    illustrative_4 = {
+    cluster_relevant = {
         # Well seperated by features-cluster with relevant parameters.
         # However, no edge clustering and no relevance of community belonging.
 
         "name": "cluster_relevant",
         "task": "multiclass",
 
-        "community_sizes": [333, 333, 333],
-        "cluster_sizes": [233, 333, 433],  # same as com_size -> overlap
+        "community_sizes": [100, 100, 300, 200, 300],
+        "cluster_sizes": [200, 200, 200, 200, 200],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
@@ -350,7 +140,7 @@ class Scenarios:
         "within_clust_covariance_range": (0, .0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
 
-        "n_targets": 3,
+        "n_targets": 5,
         "degree_importance": 1,
 
         "x_importance": 4,
@@ -363,15 +153,15 @@ class Scenarios:
 
     }  # cluster_relevant
 
-    illustrative_5 = {
+    non_seperated_cluster_relevant = {
         # Feature cluster explains target well, but clusters are not well seperated.
         # Communities are well seperated, but not really relevant.
 
         "name": "non_seperated_cluster_relevant",
         "task": "multiclass",
 
-        "community_sizes": [333, 333, 333],
-        "cluster_sizes": [233, 333, 433],  # same as com_size -> overlap
+        "community_sizes": [100, 100, 300, 200, 300],
+        "cluster_sizes": [200, 200, 200, 200, 200],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
@@ -385,7 +175,7 @@ class Scenarios:
         "within_clust_covariance_range": (0, .0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
 
-        "n_targets": 3,
+        "n_targets": 5,
         "degree_importance": 0,
 
         "x_importance": 4,
@@ -398,13 +188,13 @@ class Scenarios:
 
     }  # non_seperated_cluster_relevant
 
-    illustrative_6 = {
+    noise = {
 
         "name": "noise",
         "task": "multiclass",
 
-        "community_sizes": [333, 333, 333],
-        "cluster_sizes": [233, 333, 433],  # same as com_size -> overlap
+        "community_sizes": [200, 200, 200, 200, 200],
+        "cluster_sizes": [200, 200, 200, 200, 200],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4,
         "alpha": 2, "beta": 20, "lmbd": .5,
@@ -418,7 +208,7 @@ class Scenarios:
         "within_clust_covariance_range": (0, .0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
 
-        "n_targets": 3,
+        "n_targets": 5,
         "degree_importance": 1,
 
         "x_importance": 1,
@@ -430,6 +220,7 @@ class Scenarios:
         "splitweights": [.7, .2, .1]
 
     }  # noise
+
     # ------ Hyper parameters across all models -------
 
     hyperparams = {
@@ -445,7 +236,6 @@ class Scenarios:
         "attention_heads": 8
     }
 
-
     def __init__(self):
         """
         Must have the same order for coherence !!
@@ -457,16 +247,16 @@ class Scenarios:
         self._elements = [self.perfect,
                           self.cluster_relevant,
                           self.community_relevant,
-                          self.community_relevant_heterophilic,
-                          self.non_seperated_cluster_relevant,
+                          #self.community_relevant_heterophilic,
+                          #self.non_seperated_cluster_relevant,
                           self.noise]
 
         # Important for what scenario is actually processed !
         self.list_of_scenarios = [self.perfect["name"],
                                   self.cluster_relevant["name"],
                                   self.community_relevant["name"],
-                                  self.community_relevant_heterophilic["name"],
-                                  self.non_seperated_cluster_relevant["name"],
+                                  #self.community_relevant_heterophilic["name"],
+                                  #self.non_seperated_cluster_relevant["name"],
                                   self.noise["name"]]
         self._index = 0
 
