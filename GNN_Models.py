@@ -7,28 +7,6 @@ import torch.nn.functional as F
 # ----------------------------- GCN --------------------------------
 # ------------------------------------------------------------------
 
-# class ThreeLayerGCN(torch.nn.Module):
-#     # Deprecated
-#     def __init__(self, hidden_channels, hidden_channels2, input_channels, output_channels):
-#         super().__init__()
-#         torch.manual_seed(26)
-#         self.conv1 = GCNConv(input_channels, hidden_channels)
-#         self.conv2 = GCNConv(hidden_channels, hidden_channels2)
-#         self.conv3 = GCNConv(hidden_channels2, output_channels)
-#
-#     def forward(self, x, edge_index, drpt=0, drpt2=0):
-#         x = self.conv1(x, edge_index)
-#         x = x.relu()
-#         x = F.dropout(x, p=drpt, training=self.training)
-#
-#         x = self.conv2(x, edge_index)
-#         x = x.relu()
-#         x = F.dropout(x, p=drpt2, training=self.training)
-#
-#         x = self.conv3(x, edge_index)
-#         # x = F.softmax(x)
-#
-#         return x
 
 class TwoLayerGCN(torch.nn.Module):
     def __init__(self, hidden_channels, input_channels, output_channels):
@@ -37,14 +15,12 @@ class TwoLayerGCN(torch.nn.Module):
         self.conv1 = GCNConv(input_channels, hidden_channels)
         self.conv2 = GCNConv(hidden_channels, output_channels)
 
-    def forward(self, x, edge_index, drpt=0, drpt2=0):
+    def forward(self, x, edge_index, drpt):
         x = self.conv1(x, edge_index)
         x = x.relu()
         x = F.dropout(x, p=drpt, training=self.training)
 
         x = self.conv2(x, edge_index)
-        # x = x.relu()
-        # x = F.softmax(x)
 
         return x
 
@@ -59,19 +35,19 @@ class TwoLayerGraphSAGE(torch.nn.Module):
         self.conv1 = SAGEConv(input_channels, hidden_channels, aggr='mean')  # 'lstm', 'max', 'pool'?
         self.conv2 = SAGEConv(hidden_channels, output_channels, aggr='mean')
 
-    def forward(self, x, edge_index, drpt=0, drpt2=0):
+    def forward(self, x, edge_index, drpt):
         x = self.conv1(x, edge_index)
         x = x.relu()
         x = F.dropout(x, p=drpt, training=self.training)
 
         x = self.conv2(x, edge_index)
-        # x = x.relu()
 
         return x
 
 # ------------------------------------------------------------------
 # ----------------------------- GAT --------------------------------
 # ------------------------------------------------------------------
+
 class TwoLayerGAT(torch.nn.Module):
     def __init__(self, input_channels, hidden_channels, output_channels, heads, output_heads=1):
         super().__init__()
@@ -79,16 +55,12 @@ class TwoLayerGAT(torch.nn.Module):
         self.conv1 = GATConv(input_channels, hidden_channels, heads)
         self.conv2 = GATConv(hidden_channels * heads, output_channels, output_heads)
 
-    def forward(self, x, edge_index, drpt=0, drpt2=0):
-        x = F.dropout(x, p=drpt, training=self.training)
+    def forward(self, x, edge_index, drpt):
         x = self.conv1(x, edge_index)
-        x = F.elu(x)
+        x = F.relu(x)
+        x = F.dropout(x, p=drpt, training=self.training)
 
-        x = F.dropout(x, p=drpt2, training=self.training)
         x = self.conv2(x, edge_index)
-
-        # Optionally apply an activation function if needed for the final output
-        # x = F.softmax(x)
 
         return x
 

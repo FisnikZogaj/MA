@@ -34,9 +34,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     wgth_dcy = 5e-4
     lrn_rt = 0.01
     hc1 = 16
-    hc2 = 8
     drp1 = .4
-    drp2 = .1
     attention_heads = 8
 
     # Linux vs Windows
@@ -106,8 +104,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
 
         out = model(data.x,  # Mask missing values for semi-unsupervised learning
                     data.edge_index,  # here as well
-                    drpt=drp1,
-                    drpt2=drp2)
+                    drpt=drp1)
 
         loss = criterion(out[mask],
                          data.y[mask])  # only calculate loss on train?
@@ -124,7 +121,8 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         """
         model.eval()
         out = model(data.x,
-                    data.edge_index)
+                    data.edge_index,
+                    drpt=drp1)
 
         if mtrc == "CEL":
             pred = out.argmax(dim=1)
@@ -281,6 +279,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     # If already exists, pass
     GraphCharacteristics = {
         "h_hat": g.edge_homophily(),
+        "class_balance": np.bincount(g.y),
         "wilks_lambda": g.manova_x()
         # "tec": g.target_edge_counter(),
         # "pur": g.purity(),

@@ -86,9 +86,11 @@ class ADC_SBM:
         assert distribution in ["exp", "beta"], "Distribution must be in [exp, beta]"
 
         if distribution == "exp":
+            # rng = np.random.default_rng(seed=42)
             degree_corrections = np.random.uniform(alpha, beta, self.n_nodes) ** (-1 / lmbd)
 
         if distribution == "beta":
+            # rng = np.random.default_rng(seed=42)
             degree_corrections = np.random.beta(alpha, beta, size=self.n_nodes)
 
         # Block-Wise degree correction:
@@ -109,6 +111,7 @@ class ADC_SBM:
             dcsbm_graph = sbm(self.community_sizes, self.B, dc=self.dc, loops=False)
             self.Nx = nx.from_numpy_array(dcsbm_graph)
         else:
+            # Throw_away_seed for fixed B within scenarios
             sbm_graph = sbm(self.community_sizes, self.B, loops=False)
             self.Nx = nx.from_numpy_array(sbm_graph)
 
@@ -149,6 +152,10 @@ class ADC_SBM:
 
             num = np.arange(len(w), dtype=np.int64)
             component_labels = np.repeat(num, w)
+
+        # Alternative for fixed X
+        # rng = np.random.default_rng(seed=42)
+        # rng.multivariate_normal(mean, cov, 100)
 
         data = np.array([np.random.multivariate_normal(mu[label],
                                                        sigma[label])
@@ -557,6 +564,9 @@ def from_config(config: dict, rs=26):
     g.gen_graph()
 
     # 4) ------------ Set Node features --------------
+    # rng = np.random.default_rng(seed=42)
+    # rng.multivariate_normal(mean, cov, 100)
+
     centroids = np.random.multivariate_normal(np.repeat(0, m_features),
                                               getB(m_features,
                                                    centroid_covariance_range,
@@ -615,57 +625,57 @@ def from_config(config: dict, rs=26):
 if __name__ == "__main__":
     from config import Scenarios
 
-    #g = from_config(Scenarios.community_relevant_heterophilic)
-    #print(g.edge_homophily())
-
-    # 1) ----------------- Set Params -----------------
-    community_sizes = [100, 100, 100]  # 4 communities; fixed
-    n = sum(community_sizes)  # number of nodes (observations)
-    b_communities = len(community_sizes)  # number of communities
-    m_features = 2  # number of numeric features; fixed
-    k_clusters = 3  # number of feature clusters; Overlap Scenario (over, under, match) 3,5,4
-    alpha, beta, lmbd = 2, 20, .5  # degree_correction params; fixed
-    br, wr = (.3, .3), (.6, .6)  # assortative and dis-assortative
-
-    # 2) ------- Instantiate Class Object (Note: No graspy called yet!) ---------
-    B = getB(m=b_communities, b_range=br, w_range=wr)  # get Connection Matrix
-
-    g = ADC_SBM(community_sizes=community_sizes, B=B)  # instantiate class
-
-    # 3) ----------------- Generate the actual Graph -----------------
-    # g.correct_degree(alpha=alpha, beta=beta, lmbd=lmbd, distribution="exp")
-    g.gen_graph()
-
-    # 4) ----------------- Generate Node Features -----------------
-    # Generate "k" centroids with "m" features
-    centroids = np.random.multivariate_normal(np.repeat(0, m_features),  # mu
-                                         getB(m_features,
-                                              (0, 0),  # Covariance
-                                              (6, 6)),  # Variance (relevant for cluster separation)
-                                         k_clusters)  # n
-    # centroids will be an array of size kxm
-    # if the centroid variance is low and within-variance high,
-    # separation becomes harder, and easier if it's the other way around !
-
-    g.set_x(n_c=k_clusters,  # number of clusters
-            mu=[tuple(point) for point in centroids],  # k tuple of coordinates in m-dimensional space
-            sigma=[getB(m_features, (0, 0),  # Covariance
-                                    (1, 1))  # Variance (relevant for cluster separation)
-                   for _ in range(k_clusters)],
-            # similar covariance matrix for each centroid
-            #w=np.random.dirichlet(np.ones(k_clusters), size=1).flatten()
-            w=np.full(k_clusters, n/k_clusters, dtype=np.int64)
-            )
-
-    # 5) ----------------- Generate Targets -----------------
-    ny = 3  # number of target classes; fixed
-
-    omega = getW(m_targets=ny, n_communities=b_communities, j_features=m_features,
-                 k_clusters=k_clusters, feature_info="cluster",
-                 w_x=2, w_com=1)
-
-    g.set_y(task="multiclass", weights=omega, feature_info="cluster", eps=.5)
-
+    g = from_config(Scenarios.community_relevant_heterophilic)
     print(g.edge_homophily())
+
+    # # 1) ----------------- Set Params -----------------
+    # community_sizes = [100, 100, 100]  # 4 communities; fixed
+    # n = sum(community_sizes)  # number of nodes (observations)
+    # b_communities = len(community_sizes)  # number of communities
+    # m_features = 2  # number of numeric features; fixed
+    # k_clusters = 3  # number of feature clusters; Overlap Scenario (over, under, match) 3,5,4
+    # alpha, beta, lmbd = 2, 20, .5  # degree_correction params; fixed
+    # br, wr = (.3, .3), (.6, .6)  # assortative and dis-assortative
+    #
+    # # 2) ------- Instantiate Class Object (Note: No graspy called yet!) ---------
+    # B = getB(m=b_communities, b_range=br, w_range=wr)  # get Connection Matrix
+    #
+    # g = ADC_SBM(community_sizes=community_sizes, B=B)  # instantiate class
+    #
+    # # 3) ----------------- Generate the actual Graph -----------------
+    # # g.correct_degree(alpha=alpha, beta=beta, lmbd=lmbd, distribution="exp")
+    # g.gen_graph()
+    #
+    # # 4) ----------------- Generate Node Features -----------------
+    # # Generate "k" centroids with "m" features
+    # centroids = np.random.multivariate_normal(np.repeat(0, m_features),  # mu
+    #                                      getB(m_features,
+    #                                           (0, 0),  # Covariance
+    #                                           (6, 6)),  # Variance (relevant for cluster separation)
+    #                                      k_clusters)  # n
+    # # centroids will be an array of size kxm
+    # # if the centroid variance is low and within-variance high,
+    # # separation becomes harder, and easier if it's the other way around !
+    #
+    # g.set_x(n_c=k_clusters,  # number of clusters
+    #         mu=[tuple(point) for point in centroids],  # k tuple of coordinates in m-dimensional space
+    #         sigma=[getB(m_features, (0, 0),  # Covariance
+    #                                 (1, 1))  # Variance (relevant for cluster separation)
+    #                for _ in range(k_clusters)],
+    #         # similar covariance matrix for each centroid
+    #         #w=np.random.dirichlet(np.ones(k_clusters), size=1).flatten()
+    #         w=np.full(k_clusters, n/k_clusters, dtype=np.int64)
+    #         )
+    #
+    # # 5) ----------------- Generate Targets -----------------
+    # ny = 3  # number of target classes; fixed
+    #
+    # omega = getW(m_targets=ny, n_communities=b_communities, j_features=m_features,
+    #              k_clusters=k_clusters, feature_info="cluster",
+    #              w_x=2, w_com=1)
+    #
+    # g.set_y(task="multiclass", weights=omega, eps=.5)
+    #
+    # print(g.edge_homophily())
 
 

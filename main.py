@@ -87,14 +87,23 @@ if __name__ == '__main__':
 
     # ------------ Save the configs used for Graph generating and training -------------------
 
-    input_file_path = 'config.py'
-    output_file_path = os.path.join(subdir_path, 'configs.txt')
+    config_file_path = 'config.py'
+    output_config_path = os.path.join(subdir_path, 'configs.txt')
 
-    # Copy the code from config.py and write it to configs.txt.
-    with open(input_file_path, 'r') as input_file:
+    with open(config_file_path, 'r') as input_file:
         script_content = input_file.read()
 
-    with open(output_file_path, 'w') as output_file:
+    with open(output_config_path, 'w') as output_file:
+        output_file.write(script_content)
+
+
+    model_file_path = 'GNN_Models.py'
+    output_models_path = os.path.join(subdir_path, 'models.txt')
+
+    with open(model_file_path, 'r') as input_file:
+        script_content = input_file.read()
+
+    with open(output_models_path, 'w') as output_file:
         output_file.write(script_content)
 
     # --------------- Start Multiprocess training -------------------

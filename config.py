@@ -20,16 +20,16 @@ class Scenarios:
         "name": "perfect",
         "task": "multiclass",
 
-        "community_sizes": [200, 200, 200, 200, 200],
-        "cluster_sizes": [200, 200, 200, 200, 200],  # same as com_size -> overlap
+        "community_sizes": [300, 300, 300, 300, 300],
+        "cluster_sizes": [300, 300, 300, 300, 300],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4,
         "alpha": 2, "beta": 20, "lmbd": .5,
 
-        "between_com_prob_range": (.1, .1),
-        "within_com_prob_range": (.5, .5),  # within_range > between -> assortative
+        "between_com_prob_range": (.05, .05),
+        "within_com_prob_range": (.6, .6),  # within_range > between -> assortative
 
-        "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
+        "centroid_variance_range": (10, 10),  # spectral detectability of feature cluster
         "within_clust_variance_range": (1, 1),
 
         "within_clust_covariance_range": (0, 0),  # not important; fixed
@@ -54,22 +54,22 @@ class Scenarios:
         "name": "community_relevant",
         "task": "multiclass",
 
-        "community_sizes": [200, 200, 200, 200, 200],
-        "cluster_sizes": [100, 100, 300, 200, 300],
+        "community_sizes": [300, 300, 300, 300, 300],
+        "cluster_sizes": [300, 300, 300, 300, 300],
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
 
-        "between_com_prob_range": (.1, .1),
-        "within_com_prob_range": (.5, .5),  # within_range > between -> assortative
+        "between_com_prob_range": (.05, .05),
+        "within_com_prob_range": (.6, .6),  # within_range > between -> assortative
 
-        "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
-        "within_clust_variance_range": (5, 5),
+        "centroid_variance_range": (10, 10),  # spectral detectability of feature cluster
+        "within_clust_variance_range": (15, 15),
 
         "within_clust_covariance_range": (0, 0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
 
-        "n_targets": 3,
+        "n_targets": 5,
         "degree_importance": 0,  # no meaningfully interpretation
 
         "x_importance": 1,
@@ -90,17 +90,17 @@ class Scenarios:
         "name": "community_relevant_heterophilic",
         "task": "multiclass",
 
-        "community_sizes": [200, 200, 200, 200, 200],
-        "cluster_sizes": [100, 100, 300, 200, 300],  # same as com_size -> overlap
+        "community_sizes": [300, 300, 300, 300, 300],
+        "cluster_sizes": [300, 300, 300, 300, 300],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
 
-        "between_com_prob_range": (.4, .4),
-        "within_com_prob_range": (.5, .5),
+        "between_com_prob_range": (.6, .6),
+        "within_com_prob_range": (.05, .05),
 
-        "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
-        "within_clust_variance_range": (1, 1),
+        "centroid_variance_range": (10, 10),  # spectral detectability of feature cluster
+        "within_clust_variance_range": (15, 15),
 
         "within_clust_covariance_range": (0, 0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
@@ -125,16 +125,16 @@ class Scenarios:
         "name": "cluster_relevant",
         "task": "multiclass",
 
-        "community_sizes": [100, 100, 300, 200, 300],
-        "cluster_sizes": [200, 200, 200, 200, 200],  # same as com_size -> overlap
+        "community_sizes": [300, 300, 300, 300, 300],
+        "cluster_sizes": [300, 300, 300, 300, 300],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
 
-        "between_com_prob_range": (.4, .4),
-        "within_com_prob_range": (.5, .5),
+        "between_com_prob_range": (.6, .6),
+        "within_com_prob_range": (.05, .05),
 
-        "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
+        "centroid_variance_range": (10, 10),  # spectral detectability of feature cluster
         "within_clust_variance_range": (1, 1),
 
         "within_clust_covariance_range": (0, .0),  # not important; fixed
@@ -160,17 +160,17 @@ class Scenarios:
         "name": "non_seperated_cluster_relevant",
         "task": "multiclass",
 
-        "community_sizes": [100, 100, 300, 200, 300],
-        "cluster_sizes": [200, 200, 200, 200, 200],  # same as com_size -> overlap
+        "community_sizes": [300, 300, 300, 300, 300],
+        "cluster_sizes": [300, 300, 300, 300, 300],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 2, "beta": 20, "lmbd": .5,
 
-        "between_com_prob_range": (.4, .4),
-        "within_com_prob_range": (.5, .5),  # heterophilic
+        "between_com_prob_range": (.6, .6),
+        "within_com_prob_range": (.05, .05),  # heterophilic
 
-        "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
-        "within_clust_variance_range": (5, 5),
+        "centroid_variance_range": (10, 10),  # spectral detectability of feature cluster
+        "within_clust_variance_range": (8, 8),
 
         "within_clust_covariance_range": (0, .0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
@@ -193,17 +193,17 @@ class Scenarios:
         "name": "noise",
         "task": "multiclass",
 
-        "community_sizes": [200, 200, 200, 200, 200],
-        "cluster_sizes": [200, 200, 200, 200, 200],  # same as com_size -> overlap
+        "community_sizes": [300, 300, 300, 300, 300],
+        "cluster_sizes": [300, 300, 300, 300, 300],  # same as com_size -> overlap
         "m_features": 6,
         # "k_clusters": 4,
         "alpha": 2, "beta": 20, "lmbd": .5,
 
-        "between_com_prob_range": (.4, .4),
-        "within_com_prob_range": (.5, .5),  # within_range > between -> assortative
+        "between_com_prob_range": (.2, .2),
+        "within_com_prob_range": (.6, .6),  # within_range > between -> assortative
 
-        "centroid_variance_range": (6, 6),  # spectral detectability of feature cluster
-        "within_clust_variance_range": (5, 5),
+        "centroid_variance_range": (10, 10),  # spectral detectability of feature cluster
+        "within_clust_variance_range": (12, 12),
 
         "within_clust_covariance_range": (0, .0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
@@ -214,8 +214,8 @@ class Scenarios:
         "x_importance": 1,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
-        "community_importance": 2,  # this scale shouldn't be interpreted analog to x and degree
-        "community_importance_exponent": 2,
+        "community_importance": 1,  # this scale shouldn't be interpreted analog to x and degree
+        "community_importance_exponent": 1,
         "model_error": 6,
         "splitweights": [.7, .2, .1]
 
@@ -229,9 +229,7 @@ class Scenarios:
 
         "weight_decay": 5e-4,
         "hidden_layer1_dim": 16,
-        "hidden_layer2_dim": 8,
         "drop_out1": .4,
-        "drop_out2": .1,
         "learn_rate": 0.01,
         "attention_heads": 8
     }
@@ -247,16 +245,16 @@ class Scenarios:
         self._elements = [self.perfect,
                           self.cluster_relevant,
                           self.community_relevant,
-                          #self.community_relevant_heterophilic,
-                          #self.non_seperated_cluster_relevant,
+                          self.community_relevant_heterophilic,
+                          self.non_seperated_cluster_relevant,
                           self.noise]
 
         # Important for what scenario is actually processed !
         self.list_of_scenarios = [self.perfect["name"],
                                   self.cluster_relevant["name"],
                                   self.community_relevant["name"],
-                                  #self.community_relevant_heterophilic["name"],
-                                  #self.non_seperated_cluster_relevant["name"],
+                                  self.community_relevant_heterophilic["name"],
+                                  self.non_seperated_cluster_relevant["name"],
                                   self.noise["name"]]
         self._index = 0
 
