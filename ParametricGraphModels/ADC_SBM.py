@@ -595,31 +595,6 @@ def from_config(config: dict, rs=26):
 
     return g
 
-#def synthetic_split(config: dict, splitweights: any, rs:int):
-#    """
-#    Generate three different graphs with same configs but different sizes for
-#    a synthetic train, test, validation split.
-#
-#    rename nodes, to handle splitting?
-#    :param config:
-#    :param splitweights:
-#    :return:
-#    """
-#    # rs = 26
-#    initial_com_size = config["community_sizes"]
-#    initial_clust_size = config["cluster_sizes"]
-
-#    for i, w in enumerate(splitweights):
-#        config["community_sizes"] = np.array(config["community_sizes"]) * w
-#        config["cluster_sizes"] = np.array(config["cluster_sizes"]) * w
-
-#        if sum(config["community_sizes"]) != sum(config["cluster_sizes"]):
-#            config["community_sizes"][0] += (sum(config["cluster_sizes"]) - sum(config["community_sizes"]))
-
-#        Graph = from_config(config, rs=rs+i)
-
-#        config["community_sizes"] = initial_com_size
-#        config["cluster_sizes"] = initial_clust_size
 
 
 if __name__ == "__main__":

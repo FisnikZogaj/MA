@@ -9,7 +9,6 @@ import torch.nn
 from GNN_Models import *  # here the models are stored
 from ParametricGraphModels.ADC_SBM import from_config
 from tqdm import tqdm
-import xgboost as xgb
 from xgboost import XGBClassifier
 
 def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
@@ -64,9 +63,6 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
 
     else:  # architecture == "XGBoost"
         pass
-
-    # else:
-    #     raise ValueError(f"Model Architecture must be one of [GCN, SAGE, GAT, XGBoost]. Received: '{architecture}'.")
 
     if g.y_out_dim > 2:
         criterion = torch.nn.CrossEntropyLoss()
@@ -136,23 +132,6 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
             acc = np.mean(np.power(out[mask] - data.y[mask], 2))
 
         return acc
-
-    # def full_training(data, n_epochs=101):
-    #     val_acc_track = np.zeros(n_epochs)
-    #     #test_acc_all = np.zeros(n_epochs)
-    #     loss_track = np.zeros(n_epochs)
-    #
-    #     for epoch in range(n_epochs):
-    #         loss = train(data)
-    #         val_acc = test(data, data.val_mask)
-    #         #test_acc = test(data, data.test_mask)
-    #         val_acc_track[epoch] = val_acc
-    #         #test_acc_all[epoch] = test_acc
-    #         loss_track[epoch] = loss
-    #         print(f'Epoch: {epoch + 1:03d}, Loss: {loss:.4f}, Val: {val_acc:.4f}')
-    #     test_accuracy = test(data, data.test_mask)
-    #
-    #     return loss_track, val_acc_track, test_accuracy
 
     def full_training_early_stop(data, n_epochs=101, patience=10):
         """
