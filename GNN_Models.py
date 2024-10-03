@@ -1,6 +1,7 @@
 import torch
 from torch_geometric.nn import GATConv, SAGEConv, GCNConv
 import torch.nn.functional as F
+from torch.nn import Linear
 # Note: softmax at the end of each forward pass not necessary because CLE expects raw scores.
 
 # ------------------------------------------------------------------
@@ -11,7 +12,7 @@ import torch.nn.functional as F
 class TwoLayerGCN(torch.nn.Module):
     def __init__(self, hidden_channels, input_channels, output_channels):
         super().__init__()
-        torch.manual_seed(26)
+        # torch.manual_seed(26)
         self.conv1 = GCNConv(input_channels, hidden_channels)
         self.conv2 = GCNConv(hidden_channels, output_channels)
 
@@ -30,8 +31,8 @@ class TwoLayerGCN(torch.nn.Module):
 
 class TwoLayerGraphSAGE(torch.nn.Module):
     def __init__(self, hidden_channels, input_channels, output_channels):
-        super(TwoLayerGraphSAGE, self).__init__()
-        torch.manual_seed(26)
+        super().__init__()
+        # torch.manual_seed(26)
         self.conv1 = SAGEConv(input_channels, hidden_channels, aggr='mean')  # 'lstm', 'max', 'pool'?
         self.conv2 = SAGEConv(hidden_channels, output_channels, aggr='mean')
 
@@ -51,7 +52,7 @@ class TwoLayerGraphSAGE(torch.nn.Module):
 class TwoLayerGAT(torch.nn.Module):
     def __init__(self, input_channels, hidden_channels, output_channels, heads, output_heads=1):
         super().__init__()
-        torch.manual_seed(26)
+        #torch.manual_seed(26)
         self.conv1 = GATConv(input_channels, hidden_channels, heads)
         self.conv2 = GATConv(hidden_channels * heads, output_channels, output_heads)
 
@@ -63,6 +64,25 @@ class TwoLayerGAT(torch.nn.Module):
         x = self.conv2(x, edge_index)
 
         return x
+
+
+class TwoLayerMLP(torch.nn.Module):
+    def __init__(self, hidden_channels, input_channels, output_channels):
+        super().__init__()
+        # torch.manual_seed(26)
+        self.lin1 = Linear(input_channels, hidden_channels)
+        self.lin2 = Linear(hidden_channels, output_channels)
+
+    def forward(self, x, edge_index, drpt):  # edge_index must be included, although not needed
+        x = self.lin1(x)
+        x = F.relu(x)
+        x = F.dropout(x, p=drpt, training=self.training)
+
+        x = self.lin1(x)
+
+        return x
+
+
 
 
 

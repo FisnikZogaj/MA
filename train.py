@@ -61,6 +61,11 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
                             heads=attention_heads,
                             output_channels=num_targets)  # initialize here
 
+    elif architecture == "MLP":
+        model = TwoLayerMLP(input_channels=num_input_features,
+                            hidden_channels=hc1,
+                            output_channels=num_targets)
+
     else:  # architecture == "XGBoost"
         pass
 
@@ -98,8 +103,8 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         optimizer.zero_grad()
         mask = data.train_mask  # & (data.y != -1)
 
-        out = model(data.x,  # Mask missing values for semi-unsupervised learning
-                    data.edge_index,  # here as well
+        out = model(data.x,
+                    data.edge_index,
                     drpt=drp1)
 
         loss = criterion(out[mask],

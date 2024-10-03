@@ -44,7 +44,7 @@ class Scenarios:
         "community_importance": 4,  # this scale shouldn't be interpreted analog to x and degree
         "community_importance_exponent": 1,
         "model_error": 2,
-        "splitweights": [.7, .2, .1]
+        "splitweights": [.05, .15, .3]
 
     }  # perfect
 
@@ -78,7 +78,7 @@ class Scenarios:
         "community_importance": 4,  # diag entries
         "community_importance_exponent": 1,
         "model_error": 2,
-        "splitweights": [.7, .2, .1]
+        "splitweights": [.05, .15, .3]
 
     }  # community relevant
 
@@ -114,7 +114,7 @@ class Scenarios:
         "community_importance": 4,  # diag entries
         "community_importance_exponent": 1,
         "model_error": 2,
-        "splitweights": [.7, .2, .1]
+        "splitweights": [.05, .15, .3]
 
     }  # community_relevant_heterophilic
 
@@ -149,7 +149,7 @@ class Scenarios:
         "community_importance": 1,  # this scale shouldn't be interpreted analog to x and degree
         "community_importance_exponent": 1,
         "model_error": 2,
-        "splitweights": [.7, .2, .1]
+        "splitweights": [.05, .15, .3]
 
     }  # cluster_relevant
 
@@ -184,7 +184,7 @@ class Scenarios:
         "community_importance": 1,  # this scale shouldn't be interpreted analog to x and degree
         "community_importance_exponent": 1,
         "model_error": 2,
-        "splitweights": [.7, .2, .1]
+        "splitweights": [.05, .15, .3]
 
     }  # non_seperated_cluster_relevant
 
@@ -217,7 +217,7 @@ class Scenarios:
         "community_importance": 1,  # this scale shouldn't be interpreted analog to x and degree
         "community_importance_exponent": 1,
         "model_error": 6,
-        "splitweights": [.7, .2, .1]
+        "splitweights": [.05, .15, .3]
 
     }  # noise
 

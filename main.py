@@ -57,7 +57,7 @@ if __name__ == '__main__':
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S").translate(str.maketrans({" ": "-", ":": "-"}))
     # List of arguments for the jobs; Permutation of all settings
     job_args = [(c, a, s, ts) for c in arguments
-                for a in ["GCN", "SAGE", "GAT", "XGBoost"]
+                for a in ["GCN", "SAGE", "GAT", "MLP"]  #XGBoost
                 for s in seeds]
 
     total_num_of_jobs = len(job_args)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     subdir_path = os.path.join(base, ts)
     os.makedirs(subdir_path, exist_ok=True)
 
-    for arch in ["GCN", "SAGE", "GAT", "XGBoost"]:
+    for arch in ["GCN", "SAGE", "GAT", "MLP"]:
         for graphtype in arguments.list_of_scenarios:
             arch_path = os.path.join(subdir_path, arch)
             graphtype_path = os.path.join(arch_path, graphtype)

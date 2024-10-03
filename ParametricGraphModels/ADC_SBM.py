@@ -233,21 +233,20 @@ class ADC_SBM:
         :param splitweights: [.7,.2,.1] -> 70% train, 20% test and 10% val
         :param method: in ["runif", ...]
         """
-        assert np.abs(np.sum(splitweights) - 1) < 1e-8, "Weights dont sum up to 1."
+        # assert np.abs(np.sum(splitweights) - 1) < 1e-8, "Weights don't sum up to 1."
+        # They don't have to sum up to 1.
 
         if method == "runif":
             mv = np.round(self.n_nodes * np.array(splitweights))
-            if sum(mv) != self.n_nodes:
-                mv[0] += (self.n_nodes-sum(mv))
 
-            # indexing length must match
             rv = np.random.permutation(
-                np.concatenate((np.repeat('train', mv[0]),
-                                np.repeat('test', mv[1]),
-                                np.repeat('val', mv[2]))
-                               )
+                np.concatenate(
+                    (np.repeat("None", self.n_nodes-sum(mv)),
+                     np.repeat('train', mv[0]),
+                     np.repeat('test', mv[1]),
+                     np.repeat('val', mv[2]))
+                )
             )
-
             self.train_mask = torch.tensor(rv == 'train')
             self.test_mask = torch.tensor(rv == 'test')
             self.val_mask = torch.tensor(rv == 'val')
@@ -256,14 +255,13 @@ class ADC_SBM:
 
 
     def set_Data_object(self):
-        data = Data(x=torch.tensor(self.x, dtype=torch.float32),
-                    edge_index=self.edge_index,  # already a tensor
-                    y=torch.tensor(self.y, dtype=torch.int64),
-                    train_mask=self.train_mask,
-                    test_mask=self.test_mask,
-                    val_mask=self.val_mask)
+        self.DataObject = Data(x=torch.tensor(self.x, dtype=torch.float32),  # full features
+                               edge_index=self.edge_index,  # full Adjacency indices [[1<->2],[1<->6], ...,]
+                               y=torch.tensor(self.y, dtype=torch.int64),  # full label vector
+                               train_mask=self.train_mask,  # boolean train_mask
+                               test_mask=self.test_mask,  # boolean test_mask
+                               val_mask=self.val_mask)  # # boolean validation_mask
 
-        self.DataObject = data
 
 
     def target_edge_counter(self):
