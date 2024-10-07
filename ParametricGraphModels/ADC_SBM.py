@@ -15,6 +15,7 @@ from scipy.stats import chi2_contingency
 from sklearn.metrics import normalized_mutual_info_score
 from sklearn.metrics import adjusted_rand_score
 from statsmodels.multivariate.manova import MANOVA
+from sklearn.preprocessing import StandardScaler
 
 #print(np.__version__) # potential errors with "pybind11" when numpy.__version__ == 2.__
 
@@ -161,7 +162,11 @@ class ADC_SBM:
                                                        sigma[label])
                          for label in component_labels])
 
-        self.x = data
+        scaler = StandardScaler()
+        normalized_data = scaler.fit_transform(data)
+
+        #self.x = data
+        self.x = normalized_data
         self.cluster_labels = component_labels
         self.m = data.shape[1]
 
@@ -349,19 +354,19 @@ class ADC_SBM:
         Computes label correlations of community, feature cluster and targets.
         :return: pandas data.frame.
         """
-        labels_1 = self.y
+        # labels_1 = self.y
         labels_2 = self.cluster_labels
         labels_3 = self.community_labels
 
         correlations = pd.DataFrame({
 
-            "Y~F": [normalized_mutual_info_score(labels_1, labels_2),
-                    CramersV(labels_1, labels_2),
-                    adjusted_rand_score(labels_1, labels_2)],
-
-            "Y~C": [normalized_mutual_info_score(labels_1, labels_3),
-                    CramersV(labels_1, labels_3),
-                    adjusted_rand_score(labels_1, labels_3)],
+            # "Y~F": [normalized_mutual_info_score(labels_1, labels_2),
+            #         CramersV(labels_1, labels_2),
+            #         adjusted_rand_score(labels_1, labels_2)],
+            #
+            # "Y~C": [normalized_mutual_info_score(labels_1, labels_3),
+            #         CramersV(labels_1, labels_3),
+            #         adjusted_rand_score(labels_1, labels_3)],
 
             "F~C": [normalized_mutual_info_score(labels_2, labels_3),
                     CramersV(labels_2, labels_3),

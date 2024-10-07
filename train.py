@@ -4,6 +4,7 @@ import argparse
 import ast
 import numpy as np
 import torch.nn
+import time
 
 # Custom Modules
 from GNN_Models import *  # here the models are stored
@@ -48,18 +49,18 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     if architecture == "GCN":
         model = TwoLayerGCN(hidden_channels=hc1,
                             input_channels=num_input_features,
-                            output_channels=num_targets)  # initialize here
+                            output_channels=num_targets)
 
     elif architecture == "SAGE":
         model = TwoLayerGraphSAGE(hidden_channels=hc1,
                                   input_channels=num_input_features,
-                                  output_channels=num_targets)  # initialize here
+                                  output_channels=num_targets)
 
     elif architecture == "GAT":
         model = TwoLayerGAT(input_channels=num_input_features,
                             hidden_channels=hc1,
                             heads=attention_heads,
-                            output_channels=num_targets)  # initialize here
+                            output_channels=num_targets)
 
     elif architecture == "MLP":
         model = TwoLayerMLP(input_channels=num_input_features,
@@ -101,14 +102,14 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         """
         model.train()
         optimizer.zero_grad()
-        mask = data.train_mask  # & (data.y != -1)
+        mask = data.train_mask
 
         out = model(data.x,
                     data.edge_index,
                     drpt=drp1)
 
         loss = criterion(out[mask],
-                         data.y[mask])  # only calculate loss on train?
+                         data.y[mask])
         loss.backward()
         optimizer.step()
         return loss
@@ -138,7 +139,9 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
 
         return acc
 
-    def full_training_early_stop(data, n_epochs=101, patience=10):
+    nepchs = 101 if architecture != "GCN." else 201  # remove "."
+
+    def full_training_early_stop(data, n_epochs=nepchs, patience=10):
         """
         Run a full train_loop, with early stopping. Will run the full Epochs, but track the early stop
         and calculate test accuracy at that point.
@@ -158,8 +161,14 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         epochs_without_improvement = 0
         pseudo_break = False
 
+        iteration_times = []
         for epoch in tqdm(range(n_epochs)):
+
+            start_time = time.time()
             loss = train(data)
+            end_time = time.time()
+            iteration_times.append(end_time - start_time)
+
             val_acc = test(data, data.val_mask)
             val_acc_track[epoch] = val_acc
             loss_track[epoch] = loss
@@ -169,7 +178,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
             # Check if the current epoch has the best validation accuracy
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
-                epochs_without_improvement = 0  # Reset the patience counter
+                epochs_without_improvement = 0
             else:
                 epochs_without_improvement += 1
 
@@ -189,57 +198,59 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         loss_track = loss_track  # [:epoch]
         val_acc_track = val_acc_track  # [:epoch]
 
-        return loss_track, val_acc_track, test_accuracy, early_stop
+        return loss_track, val_acc_track, test_accuracy, early_stop, iteration_times
 
-    if architecture in ["GCN", "GAT", "SAGE"]:
+    if architecture in ["GCN", "GAT", "SAGE", "MLP"]:
         optimizer = torch.optim.Adam(model.parameters(), lr=lrn_rt, weight_decay=wgth_dcy)
-        loss_track, val_acc_track, test_accuracy, final_epoch = (
+        loss_track, val_acc_track, test_accuracy, final_epoch, epoch_times = (
             full_training_early_stop(g.DataObject, 100, 25))
 
     else:  # XGBoost, not Manually specified
-        model = XGBClassifier(
-            objective='multi:softmax',
-            num_class=g.y_out_dim,
-            use_label_encoder=False,
-            eval_metric=['mlogloss', "merror"],
-            n_estimators=100,  # Number of boosting rounds (epochs)
-            learning_rate=lrn_rt,  # Step size shrinkage
-            max_depth=10,  # Maximum depth of trees
-            min_child_weight=3,  # Minimum sum of instance weight
-            subsample=0.8,  # Fraction of samples
-            colsample_bytree=0.8,  # Fraction of features
-            gamma=1,  # Minimum loss reduction to split a node
-            verbosity=0
-        )
+        raise AssertionError("No valid model selected.")
 
-        X = g.DataObject.x
-        y = g.DataObject.y
-
-        train_mask = g.DataObject.train_mask
-        test_mask = g.DataObject.test_mask
-        val_mask = g.DataObject.val_mask
-        eval_set = [(X[train_mask], y[train_mask]), (X[val_mask], y[val_mask])]  # 0, 1 index
-
-        model.fit(X[train_mask], y[train_mask], eval_set=eval_set, verbose=False)
-        evals_result = model.evals_result()
-        y_pred = model.predict(X[test_mask])
-
-        test_accuracy = np.mean(y_pred == np.array(y[test_mask]))
-        loss_track = evals_result['validation_0']['mlogloss']
-        val_acc_track = 1 - np.array(evals_result['validation_1']['merror'])  # accuracy
-
-        counter = 0
-        final_epoch = 100
-        for i, e in enumerate(np.diff(val_acc_track)):
-            if e == 0:
-                counter += 1
-            elif counter > 10:
-                final_epoch = i
-                break
-            else:
-                counter = 0
-
-    print("Training successfully completed!",  "\n")
+    #     model = XGBClassifier(
+    #         objective='multi:softmax',
+    #         num_class=g.y_out_dim,
+    #         use_label_encoder=False,
+    #         eval_metric=['mlogloss', "merror"],
+    #         n_estimators=100,  # Number of boosting rounds (epochs)
+    #         learning_rate=lrn_rt,  # Step size shrinkage
+    #         max_depth=10,  # Maximum depth of trees
+    #         min_child_weight=3,  # Minimum sum of instance weight
+    #         subsample=0.8,  # Fraction of samples
+    #         colsample_bytree=0.8,  # Fraction of features
+    #         gamma=1,  # Minimum loss reduction to split a node
+    #         verbosity=0
+    #     )
+    #
+    #     X = g.DataObject.x
+    #     y = g.DataObject.y
+    #
+    #     train_mask = g.DataObject.train_mask
+    #     test_mask = g.DataObject.test_mask
+    #     val_mask = g.DataObject.val_mask
+    #     eval_set = [(X[train_mask], y[train_mask]), (X[val_mask], y[val_mask])]  # 0, 1 index
+    #
+    #     model.fit(X[train_mask], y[train_mask], eval_set=eval_set, verbose=False)
+    #     evals_result = model.evals_result()
+    #     y_pred = model.predict(X[test_mask])
+    #
+    #     test_accuracy = np.mean(y_pred == np.array(y[test_mask]))
+    #     loss_track = evals_result['validation_0']['mlogloss']
+    #     val_acc_track = 1 - np.array(evals_result['validation_1']['merror'])  # accuracy
+    #
+    #     counter = 0
+    #     final_epoch = 100
+    #     for i, e in enumerate(np.diff(val_acc_track)):
+    #         if e == 0:
+    #             counter += 1
+    #         elif counter > 10:
+    #             final_epoch = i
+    #             break
+    #         else:
+    #             counter = 0
+    #
+    # print("Training successfully completed!",  "\n")
 
     # ---------------- Save all results -----------------
 
@@ -249,6 +260,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         "loss_track": loss_track,
         "val_acc_track": val_acc_track,
         "test_accuracy": test_accuracy,
+        "epoch_times": epoch_times,
         "final_epoch": final_epoch
     }
 
@@ -264,10 +276,10 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     GraphCharacteristics = {
         "h_hat": g.edge_homophily(),
         "class_balance": np.bincount(g.y),
+        "lab_corr": g.label_correlation(),
         "wilks_lambda": g.manova_x()
         # "tec": g.target_edge_counter(),
         # "pur": g.purity(),
-        # "lab_corr": g.label_correlation()
     }
 
     output_path = os.path.join(final_gchar_path, f"output{seed}.pkl")
@@ -298,7 +310,7 @@ if __name__ == "__main__":
 
     # from config import Scenarios
     # run_experiment(graph_config=Scenarios.perfect,
-    #                 architecture="GCN",
+    #                 architecture="MLP",
     #                 seed=1,
     #                 ts="debug")
 

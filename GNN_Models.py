@@ -78,7 +78,7 @@ class TwoLayerMLP(torch.nn.Module):
         x = F.relu(x)
         x = F.dropout(x, p=drpt, training=self.training)
 
-        x = self.lin1(x)
+        x = self.lin2(x)
 
         return x
 
