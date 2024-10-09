@@ -346,7 +346,8 @@ class ADC_SBM:
         wilks_lambda = manova_result.results['Group']['stat'].iloc[0, 0]
         p_value = manova_result.results['Group']['stat'].iloc[0, -1]
 
-        return np.round(wilks_lambda, 3), np.round(p_value, 3)
+        # return np.round(wilks_lambda, 3), np.round(p_value, 3)
+        return np.round(wilks_lambda, 3)
 
 
     def label_correlation(self):

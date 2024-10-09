@@ -61,7 +61,7 @@ class Scenarios:
         "alpha": 1, "beta": 1, "lmbd": -1,
 
         "between_com_prob_range": (.05, .05),
-        "within_com_prob_range": (.6, .6),  # within_range > between -> assortative
+        "within_com_prob_range": (.7, .7),  # within_range > between -> assortative
 
         "centroid_variance_range": (10, 10),  # spectral detectability of feature cluster
         "within_clust_variance_range": (10, 10),
@@ -96,8 +96,8 @@ class Scenarios:
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 1, "beta": 1, "lmbd": -1,
 
-        "between_com_prob_range": (.75, .75),
-        "within_com_prob_range": (.025, .025),
+        "between_com_prob_range": (.8, .8),
+        "within_com_prob_range": (.02, .02),
 
         "centroid_variance_range": (10, 10),  # spectral detectability of feature cluster
         "within_clust_variance_range": (10, 10),
@@ -134,7 +134,7 @@ class Scenarios:
         "between_com_prob_range": (.05, .05),
         "within_com_prob_range": (.05, .05),
 
-        "centroid_variance_range": (15, 15),  # spectral detectability of feature cluster
+        "centroid_variance_range": (18, 18),  # spectral detectability of feature cluster
         "within_clust_variance_range": (1, 1),
 
         "within_clust_covariance_range": (0, 0),  # not important; fixed
@@ -170,7 +170,7 @@ class Scenarios:
         "within_com_prob_range": (.05, .05),  # heterophilic
 
         "centroid_variance_range": (10, 10),  # spectral detectability of feature cluster
-        "within_clust_variance_range": (10, 10),
+        "within_clust_variance_range": (14, 14),
 
         "within_clust_covariance_range": (0, .0),  # not important; fixed
         "centroid_covariance_range": (0, 0),  # not important; fixed
@@ -292,7 +292,7 @@ class Sparse:
 
         "community_sizes": [600, 600, 600, 600, 600],
         "cluster_sizes": [600, 600, 600, 600, 600],
-        "m_features": 6,
+        "m_features": 10,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 1, "beta": 1, "lmbd": -1,
 
@@ -311,7 +311,7 @@ class Sparse:
         "x_importance": 1,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
-        "community_importance": 4,  # diag entries
+        "community_importance": 3,  # diag entries
         "community_importance_exponent": 1,
         "model_error": 2,
         "splitweights": [.05, .2, .3]
@@ -325,7 +325,7 @@ class Sparse:
 
         "community_sizes": [600, 600, 600, 600, 600],
         "cluster_sizes": [600, 600, 600, 600, 600],
-        "m_features": 6,
+        "m_features": 10,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 1, "beta": 1, "lmbd": -1,
 
@@ -344,7 +344,7 @@ class Sparse:
         "x_importance": 1,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
-        "community_importance": 4,  # diag entries
+        "community_importance": 3,  # diag entries
         "community_importance_exponent": 1,
         "model_error": 2,
         "splitweights": [.05, .2, .3]
@@ -358,7 +358,7 @@ class Sparse:
 
         "community_sizes": [600, 600, 600, 600, 600],
         "cluster_sizes": [600, 600, 600, 600, 600],
-        "m_features": 6,
+        "m_features": 10,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 1, "beta": 1, "lmbd": -1,
 
@@ -377,7 +377,7 @@ class Sparse:
         "x_importance": 1,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
-        "community_importance": 4,  # diag entries
+        "community_importance": 3,  # diag entries
         "community_importance_exponent": 1,
         "model_error": 2,
         "splitweights": [.05, .2, .3]
@@ -391,11 +391,11 @@ class Sparse:
 
         "community_sizes": [600, 600, 600, 600, 600],
         "cluster_sizes": [600, 600, 600, 600, 600],
-        "m_features": 6,
+        "m_features": 10,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 1, "beta": 1, "lmbd": -1,
 
-        "between_com_prob_range": (.6, .6),
+        "between_com_prob_range": (.3, .3),
         "within_com_prob_range": (.4, .4),  # within_range > between -> assortative
 
         "centroid_variance_range": (10, 10),  # spectral detectability of feature cluster
@@ -410,7 +410,7 @@ class Sparse:
         "x_importance": 1,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
-        "community_importance": 4,  # diag entries
+        "community_importance": 3,  # diag entries
         "community_importance_exponent": 1,
         "model_error": 2,
         "splitweights": [.05, .2, .3]
@@ -419,17 +419,17 @@ class Sparse:
 
     very_weak = {
 
-        "name": "strong",
+        "name": "very_weak",
         "task": "multiclass",
 
         "community_sizes": [600, 600, 600, 600, 600],
         "cluster_sizes": [600, 600, 600, 600, 600],
-        "m_features": 6,
+        "m_features": 10,
         # "k_clusters": 4, determined by "cluster_size"
         "alpha": 1, "beta": 1, "lmbd": -1,
 
-        "between_com_prob_range": (.05, .05),
-        "within_com_prob_range": (.9, .9),  # within_range > between -> assortative
+        "between_com_prob_range": (.5, .5),
+        "within_com_prob_range": (.6, .6),  # within_range > between -> assortative
 
         "centroid_variance_range": (10, 10),  # spectral detectability of feature cluster
         "within_clust_variance_range": (10, 10),
@@ -443,7 +443,7 @@ class Sparse:
         "x_importance": 1,
         "feature_info": "cluster",  # "number" or "cluster" use x right away or dummies for cluster
 
-        "community_importance": 4,  # diag entries
+        "community_importance": 3,  # diag entries
         "community_importance_exponent": 1,
         "model_error": 2,
         "splitweights": [.05, .2, .3]
@@ -678,16 +678,16 @@ class Seperable:
         After one full iteration it does not revert back to first index.
         """
 
-        self._elements = [self.very_strong,
-                          self.strong,
-                          self.mid,
+        self._elements = [#self.very_strong,
+                          #self.strong,
+                          #self.mid,
                           self.weak,
                           self.very_weak]
 
         # Important for what scenario is actually processed !
-        self.list_of_scenarios = [self.very_strong["name"],
-                                  self.strong["name"],
-                                  self.mid["name"],
+        self.list_of_scenarios = [#self.very_strong["name"],
+                                  #self.strong["name"],
+                                  #self.mid["name"],
                                   self.weak["name"],
                                   self.very_weak["name"]]
         self._index = 0
