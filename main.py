@@ -3,11 +3,14 @@ import time
 import multiprocessing as mp
 from datetime import datetime
 import os
+#from config import Sparse as Scenarios
+#from config import Seperable as Scenarios
 from config import Scenarios
 
+
 fail_count = 0
-base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"  # my machine
-# base = r"/home/zogaj/MA/ExperimentLogs"  # Linux Server
+# base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"  # my machine
+base = r"/home/zogaj/MA/ExperimentLogs"  # Linux Server
 
 def run_job(config: dict, architecture: str, seed: int, timestamp: str):
     """
@@ -20,8 +23,8 @@ def run_job(config: dict, architecture: str, seed: int, timestamp: str):
     :return:
     """
 
-    python = r'C:\Users\zogaj\PycharmProjects\MA\venv\Scripts\python.exe' # my machine
-    #python = r'/home/zogaj/MA/genv/bin/python'  # Linux server
+    #python = r'C:\Users\zogaj\PycharmProjects\MA\venv\Scripts\python.exe' # my machine
+    python = r'/home/zogaj/MA/genv/bin/python'  # Linux server
     config_str = str(config)  # Convert dictionary to string for argparse
     command = [
         python, 'train.py',  # The script to run on the version of python specified
@@ -44,20 +47,20 @@ def run_job_safe(args, counter, lock, total_num_of_jobs):
             print(f"{counter.value}/{total_num_of_jobs} done!")
         return result
     except Exception as e:
-        print(f"Job with args {args} generated an exception: {e}")
+        print(f"Job with args {args} generated an error: {e}")
         fail_count += 1
         return None
 
 if __name__ == '__main__':
     start_time = time.time()
     # Note: range determines the number of Monte-Carlo runs
-    seeds = list(range(1, 31))
+    seeds = list(range(31, 101))  # [1,2,...,n-1]
     arguments = Scenarios()
 
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S").translate(str.maketrans({" ": "-", ":": "-"}))
     # List of arguments for the jobs; Permutation of all settings
     job_args = [(c, a, s, ts) for c in arguments
-                for a in ["GCN", "SAGE", "GAT", "MLP"]  #XGBoost
+                for a in ["GCN", "SAGE", "GAT", "MLP"]
                 for s in seeds]
 
     total_num_of_jobs = len(job_args)
@@ -77,9 +80,6 @@ if __name__ == '__main__':
     # ---- Make directories for saving Graph Characteristics ---
 
     for graphtype in arguments.list_of_scenarios:
-        # purity: gini and entropy for com/centroid
-        # tec: target edge counter
-        # lab_corr: 4 metrics for y~c, y~f, c~f
         gchar_path = os.path.join(subdir_path, "GraphCharacteristics")
         gtype_path = os.path.join(gchar_path, graphtype)
         os.makedirs(gtype_path, exist_ok=True)
@@ -87,6 +87,7 @@ if __name__ == '__main__':
 
     # ------------ Save the configs used for Graph generating and training -------------------
 
+    # ---- Graph Parameters: ----
     config_file_path = 'config.py'
     output_config_path = os.path.join(subdir_path, 'configs.txt')
 
@@ -96,9 +97,19 @@ if __name__ == '__main__':
     with open(output_config_path, 'w') as output_file:
         output_file.write(script_content)
 
-
+    # ---- Models: ----
     model_file_path = 'GNN_Models.py'
     output_models_path = os.path.join(subdir_path, 'models.txt')
+
+    with open(model_file_path, 'r') as input_file:
+        script_content = input_file.read()
+
+    with open(output_models_path, 'w') as output_file:
+        output_file.write(script_content)
+
+    # ---- Train setting: ----
+    model_file_path = 'train.py'
+    output_models_path = os.path.join(subdir_path, 'train.txt')
 
     with open(model_file_path, 'r') as input_file:
         script_content = input_file.read()
@@ -111,7 +122,7 @@ if __name__ == '__main__':
     manager = mp.Manager()
     counter = manager.Value('i', 0)
     lock = manager.Lock()
-    max_concurrent_jobs = 2
+    max_concurrent_jobs = 50
 
     with mp.Pool(processes=max_concurrent_jobs) as pool:
         results = [pool.apply_async(run_job_safe, args=(arg, counter, lock, total_num_of_jobs)) for arg in job_args]
@@ -121,3 +132,4 @@ if __name__ == '__main__':
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"Total execution time: {elapsed_time:.2f} seconds")
+    print(f"Fail counter: {fail_count}")

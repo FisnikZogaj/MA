@@ -26,7 +26,6 @@ def CramersV(labels_1, labels_2):
     r, k = contingency_table.shape
 
     return np.sqrt(phi2 / min(k - 1, r - 1))
-
 class ADC_SBM:
 
     def __init__(self, community_sizes: list, B: np.array):
@@ -34,19 +33,18 @@ class ADC_SBM:
         :param community_sizes: E.g.: [70, 50, 100]
         :param B: Connection Prob Matrix
         """
-        self.Nx = None # Here the NetworkX object is stored
-        self.edge_index = None # edge indices [[tensor],[tensor]]
+        self.Nx = None  # Here the NetworkX object is stored
+        self.edge_index = None  # edge indices [[tensor],[tensor]]
 
-        self.pos_edge_label_index = None # used for link prediction
-        self.neg_edge_label_index = None # used for link prediction
+        self.pos_edge_label_index = None  # used for link prediction
+        self.neg_edge_label_index = None  # used for link prediction
 
         # Split Masks:
         self.train_mask = None
         self.test_mask = None
         self.val_mask = None
 
-        self.degrees = None # degree of each node
-        self.task = None # string indicator of the task
+        self.degrees = None  # degree of each node
 
         self.community_sizes = community_sizes # list of sizes
         self.n_nodes = sum(community_sizes)
@@ -54,7 +52,7 @@ class ADC_SBM:
         # labels the communities:
         self.community_labels = np.concatenate([np.full(n, i)
                                                 for i, n in enumerate(community_sizes)])
-        self.cluster_labels = None # labels the numeric feature cluster (gaussian component)
+        self.cluster_labels = None  # labels the numeric feature cluster (gaussian component)
 
         # Block prob matrix:
         self.B = B
@@ -66,7 +64,7 @@ class ADC_SBM:
         self.x = None
         self.x_tsne = None
         self.y = None
-        self.y_out_dim = None # either 1 when regression or k labels when not
+        self.y_out_dim = None  # either 1 when regression or k labels when not
         self.m = None
 
         self.name = None
@@ -87,11 +85,9 @@ class ADC_SBM:
         assert distribution in ["exp", "beta"], "Distribution must be in [exp, beta]"
 
         if distribution == "exp":
-            # rng = np.random.default_rng(seed=42)
             degree_corrections = np.random.uniform(alpha, beta, self.n_nodes) ** (-1 / lmbd)
 
         if distribution == "beta":
-            # rng = np.random.default_rng(seed=42)
             degree_corrections = np.random.beta(alpha, beta, size=self.n_nodes)
 
         # Block-Wise degree correction:
@@ -112,7 +108,6 @@ class ADC_SBM:
             dcsbm_graph = sbm(self.community_sizes, self.B, dc=self.dc, loops=False)
             self.Nx = nx.from_numpy_array(dcsbm_graph)
         else:
-            # Throw_away_seed for fixed B within scenarios
             sbm_graph = sbm(self.community_sizes, self.B, loops=False)
             self.Nx = nx.from_numpy_array(sbm_graph)
 
@@ -154,19 +149,15 @@ class ADC_SBM:
             num = np.arange(len(w), dtype=np.int64)
             component_labels = np.repeat(num, w)
 
-        # Alternative for fixed X
-        # rng = np.random.default_rng(seed=42)
-        # rng.multivariate_normal(mean, cov, 100)
 
         data = np.array([np.random.multivariate_normal(mu[label],
                                                        sigma[label])
                          for label in component_labels])
 
         scaler = StandardScaler()
-        normalized_data = scaler.fit_transform(data)
+        data = scaler.fit_transform(data)
 
-        #self.x = data
-        self.x = normalized_data
+        self.x = data
         self.cluster_labels = component_labels
         self.m = data.shape[1]
 
@@ -182,7 +173,7 @@ class ADC_SBM:
         return self.cluster_labels, self.x_tsne
 
 
-    def set_y(self, task: str, weights: np.array, eps:float=1):
+    def set_y(self, weights: np.array, eps:float=1):
         """
         :param task: ["regression","binary","multiclass"]
         :param weights: array of numbers specifying the importance of each feature
@@ -193,15 +184,6 @@ class ADC_SBM:
         :param eps: Variance of the error component, high variances will lead to heavy Y-mixing between clusters
         :return: targets
         """
-        # Assertions are still a bit messy, but they work
-        if task == "multiclass":
-            assert weights.shape[0] > 1, "Not enough classes"
-        elif task == "regression" or task == "binary":
-            assert len(weights.shape) == 1, "Weights must be a vector"
-        else:
-            raise ValueError("Invalid task")
-
-        self.task = task
 
         feat_mat = np.hstack(
             (pd.get_dummies(self.cluster_labels).to_numpy(dtype=np.float16),
@@ -211,24 +193,11 @@ class ADC_SBM:
 
         beta = np.ones(weights.shape) * weights
 
-        if task == "regression":
-            error = np.random.normal(0, eps, self.n_nodes)  # eps uses SD, not VAR
-            self.y = np.dot(feat_mat, beta) + error
-            self.y_out_dim = 1
-
-        if task == "binary":
-            error = np.random.normal(0, eps, self.n_nodes)
-            self.y = ((1 / (1 + np.exp(-np.dot(feat_mat, beta))) + error)
-                      > np.random.uniform(size=self.n_nodes))
-            self.y_out_dim = 2
-
-        if task == "multiclass":
-            # assert
-            error = np.random.normal(0, eps, (self.n_nodes, beta.shape[0]))
-            logits = np.dot(feat_mat, beta.T) + error
-            probabilities = softmax(logits, axis=1)
-            self.y = np.argmax(probabilities, axis=1)
-            self.y_out_dim = probabilities.shape[1]
+        error = np.random.normal(0, eps, (self.n_nodes, beta.shape[0]))
+        logits = np.dot(feat_mat, beta.T) + error
+        probabilities = softmax(logits, axis=1)
+        self.y = np.argmax(probabilities, axis=1)
+        self.y_out_dim = probabilities.shape[1]
 
     # -------------------- Prepare Data Objects for Training -------------------------------
 
@@ -293,6 +262,20 @@ class ADC_SBM:
         df = pd.DataFrame(counter)
         return df
 
+    def simple_edge_homophily(self):
+        G = self.Nx
+        n = self.n_nodes
+        total_neighbors = np.array([tpl[1] for tpl in list(G.degree())])
+
+        same_label_neighbors = np.zeros(n, dtype=int)
+        labels = np.array(self.y)
+
+        for node in range(n):
+            neighbors = list(G.neighbors(node))
+            # total_neighbors[node] = len(neighbors)
+            same_label_neighbors[node] = sum(labels[neighbor] == labels[node] for neighbor in neighbors)
+        return sum(same_label_neighbors)/sum(total_neighbors)
+
     def edge_homophily(self):
         """
         Computes homophilly meassure from Lim et al. (2021).
@@ -347,7 +330,6 @@ class ADC_SBM:
         p_value = manova_result.results['Group']['stat'].iloc[0, -1]
 
         return np.round(wilks_lambda, 3), np.round(p_value, 3)
-        # return np.round(wilks_lambda, 3)
 
 
     def label_correlation(self):
@@ -355,23 +337,20 @@ class ADC_SBM:
         Computes label correlations of community, feature cluster and targets.
         :return: pandas data.frame.
         """
-        # labels_1 = self.y
+        labels_1 = self.y
         labels_2 = self.cluster_labels
         labels_3 = self.community_labels
 
         correlations = pd.DataFrame({
 
-            # "Y~F": [normalized_mutual_info_score(labels_1, labels_2),
-            #         CramersV(labels_1, labels_2),
-            #         adjusted_rand_score(labels_1, labels_2)],
-            #
-            # "Y~C": [normalized_mutual_info_score(labels_1, labels_3),
-            #         CramersV(labels_1, labels_3),
-            #         adjusted_rand_score(labels_1, labels_3)],
+            "Y~F": [normalized_mutual_info_score(labels_1, labels_2),
+                    CramersV(labels_1, labels_2),
+                    adjusted_rand_score(labels_1, labels_2)],
 
-            "F~C": [normalized_mutual_info_score(labels_2, labels_3),
-                    CramersV(labels_2, labels_3),
-                    adjusted_rand_score(labels_2, labels_3)]
+            "Y~C": [normalized_mutual_info_score(labels_1, labels_3),
+                    CramersV(labels_1, labels_3),
+                    adjusted_rand_score(labels_1, labels_3)],
+
         },
             index=["NMI", "CV", "ARI"]
         )
@@ -421,60 +400,6 @@ class ADC_SBM:
         plt.show()
 
 
-    def purity(self, metric:str = "gini"):
-        """
-        :param group_by: ["Community", "Feat.Cluster"]
-        :param metric: gini or enrtropy
-        :param plot_it: colors for plotting
-        Plot Grouped Distribution for Target Y
-        :return: A dataframe with purity-scores for each group
-        """
-        #grouped_counts.plot(kind='bar', figsize=fig_size)
-        # plt.xlabel(group_by)
-        # plt.ylabel('Grouped Frequencies')
-        # plt.title(' ')
-        # plt.legend(title="Target Label")
-        # plt.show()
-
-        df_f = pd.DataFrame({"Feat.Cluster": self.cluster_labels, 'Y': self.y})
-        df_c = pd.DataFrame({"Community": self.community_labels, 'Y': self.y})
-
-        grouped_counts_f = df_f.groupby(["Feat.Cluster", 'Y']).size().unstack(fill_value=0)
-        grouped_counts_c = df_c.groupby(["Community", 'Y']).size().unstack(fill_value=0)
-
-        gini = lambda x: 1 - sum(x ** 2)
-        entropy = lambda x: -sum(x * np.log2(x + 1e-9))
-        # lambda x: -np.sum(x * np.log2(x + 1e-9)) if np.all(x > 0) else 0.0
-
-        if metric == "gini":
-            pure_df1 = (
-                       grouped_counts_f.
-                       div(grouped_counts_f.sum(axis=1), axis=0).
-                       apply(gini, axis=1)
-                    )
-            pure_df_2 = (
-                       grouped_counts_c.
-                       div(grouped_counts_c.sum(axis=1), axis=0).
-                       apply(gini, axis=1)
-                )
-            return {"cluster": pure_df1,
-                    "community": pure_df_2}
-
-        if metric == "entropy":
-            pure_df_3 = (
-                       grouped_counts_f.
-                       div(grouped_counts_f.sum(axis=1), axis=0).
-                       apply(entropy, axis=1)
-                    )
-            pure_df_4 = (
-                       grouped_counts_c.
-                       div(grouped_counts_c.sum(axis=1), axis=0).
-                       apply(entropy, axis=1)
-                )
-
-            return {"cluster": pure_df_3,
-                    "community": pure_df_4}
-
 
 def getB(m: int, b_range: tuple, w_range: tuple, rs: int = False):
     """
@@ -483,7 +408,7 @@ def getB(m: int, b_range: tuple, w_range: tuple, rs: int = False):
     :param m: row and col dimension
     :param b_range: between range -> triangular part
     :param w_range: within range -> diagonal part
-    :param rs:
+    :param rs: random state
     """
     if rs:
         np.random.seed(rs)
@@ -496,33 +421,22 @@ def getB(m: int, b_range: tuple, w_range: tuple, rs: int = False):
     return B
 
 
-def getW(m_targets, n_communities, j_features,
-         k_clusters, feature_info: str,
-         w_x: float, w_com: float):
+def getW(m_targets, n_communities, k_clusters, w_x: float, w_com: float):
     """
     W (Omega) are the weights that are used to determine the importance of Cluster and Community
     Newer Version, that doesn't rely on random chance too much.
     Fills the diagonal by adding number to it.
     """
-    # Degree Importance:
-    # degree_betas = np.random.normal(loc=0, scale=0, size=(m_targets, 1))  # Deprecated
 
-    # Feature Cluster importance:
-    if feature_info == "number":  # Deprecated
-        x_betas = np.random.normal(loc=w_x, scale=1, size=(j_features, m_targets)).T
-
-    elif feature_info == "cluster":
-        x_betas = np.random.uniform(0, 1, (m_targets, k_clusters))
-        np.fill_diagonal(x_betas, x_betas.diagonal() + w_x)
-    else:
-        raise ValueError(f"feature_info must either be 'number' or 'cluster'. '{feature_info}' provided")
+    # Community importance:
+    x_betas = np.random.uniform(0, 1, (m_targets, k_clusters))
+    np.fill_diagonal(x_betas, x_betas.diagonal() + w_x)
 
     # Community importance:
     community_betas = np.random.uniform(0, 1, (m_targets, n_communities))
     np.fill_diagonal(community_betas, community_betas.diagonal() + w_com)
 
-    return np.hstack((#degree_betas,
-                      x_betas, community_betas))
+    return np.hstack((x_betas, community_betas))
 
 
 def from_config(config: dict, rs=26):
@@ -539,13 +453,12 @@ def from_config(config: dict, rs=26):
 
     # 1) ----------------- Set Params ----------------- kinda redundant
     community_sizes = config["community_sizes"]
-    # n = sum(community_sizes)
     b_communities = len(community_sizes)
 
     m_features = config["m_features"]
     cluster_sizes = config["cluster_sizes"]
     k_clusters = len(config["cluster_sizes"])
-    alpha, beta, lmbd = config["alpha"], config["beta"], config["lmbd"] #fixed anyway
+    alpha, beta, lmbd = config["alpha"], config["beta"], config["lmbd"]
 
     b_com_r, w_com_r = config["between_com_prob_range"], config["within_com_prob_range"]
     w_clust_v, w_clust_c = config["within_clust_variance_range"], config["within_clust_covariance_range"]
@@ -555,7 +468,6 @@ def from_config(config: dict, rs=26):
     centroid_variance_range = config["centroid_variance_range"]
     centroid_covariance_range = config["centroid_covariance_range"]
 
-    degree_importance = config["degree_importance"]
     x_importance = config["x_importance"]
     community_importance = config["community_importance"]
 
@@ -564,12 +476,10 @@ def from_config(config: dict, rs=26):
     B = getB(m=b_communities, b_range=b_com_r, w_range=w_com_r)  # get Connection Matrix
     g = ADC_SBM(community_sizes=community_sizes, B=B)  # instantiate class
 
-    g.correct_degree(alpha=alpha, beta=beta, lmbd=lmbd, distribution="exp")
+    # g.correct_degree(alpha=alpha, beta=beta, lmbd=lmbd, distribution="exp")
     g.gen_graph()
 
     # 4) ------------ Set Node features --------------
-    # rng = np.random.default_rng(seed=42)
-    # rng.multivariate_normal(mean, cov, 100)
 
     centroids = np.random.multivariate_normal(np.repeat(0, m_features),
                                               getB(m_features,
@@ -586,13 +496,13 @@ def from_config(config: dict, rs=26):
             )
 
     # 5) ----------------- Set Node features -----------------
-    if config["task"] == "multiclass":  # This will be the case
-        omega = getW(m_targets=n_targets, n_communities=b_communities, j_features=m_features,
-                     k_clusters=k_clusters, feature_info=config["feature_info"],
-                     w_x=x_importance, w_com=community_importance)
+
+    omega = getW(m_targets=n_targets, n_communities=b_communities,
+                 k_clusters=k_clusters, w_x=x_importance,
+                 w_com=community_importance)
 
 
-    g.set_y(task=config["task"], weights=omega, eps=config["model_error"])
+    g.set_y(weights=omega, eps=config["model_error"])
 
     g.split_data(config["splitweights"])  # Data must be split, before creating the object !
     g.set_Data_object()
@@ -605,56 +515,5 @@ if __name__ == "__main__":
     from config import Scenarios
 
     g = from_config(Scenarios.community_relevant_heterophilic)
-    print(g.edge_homophily())
-
-    # # 1) ----------------- Set Params -----------------
-    # community_sizes = [100, 100, 100]  # 4 communities; fixed
-    # n = sum(community_sizes)  # number of nodes (observations)
-    # b_communities = len(community_sizes)  # number of communities
-    # m_features = 2  # number of numeric features; fixed
-    # k_clusters = 3  # number of feature clusters; Overlap Scenario (over, under, match) 3,5,4
-    # alpha, beta, lmbd = 2, 20, .5  # degree_correction params; fixed
-    # br, wr = (.3, .3), (.6, .6)  # assortative and dis-assortative
-    #
-    # # 2) ------- Instantiate Class Object (Note: No graspy called yet!) ---------
-    # B = getB(m=b_communities, b_range=br, w_range=wr)  # get Connection Matrix
-    #
-    # g = ADC_SBM(community_sizes=community_sizes, B=B)  # instantiate class
-    #
-    # # 3) ----------------- Generate the actual Graph -----------------
-    # # g.correct_degree(alpha=alpha, beta=beta, lmbd=lmbd, distribution="exp")
-    # g.gen_graph()
-    #
-    # # 4) ----------------- Generate Node Features -----------------
-    # # Generate "k" centroids with "m" features
-    # centroids = np.random.multivariate_normal(np.repeat(0, m_features),  # mu
-    #                                      getB(m_features,
-    #                                           (0, 0),  # Covariance
-    #                                           (6, 6)),  # Variance (relevant for cluster separation)
-    #                                      k_clusters)  # n
-    # # centroids will be an array of size kxm
-    # # if the centroid variance is low and within-variance high,
-    # # separation becomes harder, and easier if it's the other way around !
-    #
-    # g.set_x(n_c=k_clusters,  # number of clusters
-    #         mu=[tuple(point) for point in centroids],  # k tuple of coordinates in m-dimensional space
-    #         sigma=[getB(m_features, (0, 0),  # Covariance
-    #                                 (1, 1))  # Variance (relevant for cluster separation)
-    #                for _ in range(k_clusters)],
-    #         # similar covariance matrix for each centroid
-    #         #w=np.random.dirichlet(np.ones(k_clusters), size=1).flatten()
-    #         w=np.full(k_clusters, n/k_clusters, dtype=np.int64)
-    #         )
-    #
-    # # 5) ----------------- Generate Targets -----------------
-    # ny = 3  # number of target classes; fixed
-    #
-    # omega = getW(m_targets=ny, n_communities=b_communities, j_features=m_features,
-    #              k_clusters=k_clusters, feature_info="cluster",
-    #              w_x=2, w_com=1)
-    #
-    # g.set_y(task="multiclass", weights=omega, eps=.5)
-    #
-    # print(g.edge_homophily())
 
 
