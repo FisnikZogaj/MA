@@ -188,18 +188,18 @@ class Scenarios:
         """
 
         self._elements = [self.perfect,
-                          self.cluster_relevant,
                           self.community_relevant,
                           self.community_relevant_heterophilic,
+                          self.cluster_relevant,
                           self.non_seperated_cluster_relevant,
                           self.noise
             ]
 
         # Important for what scenario is actually processed !
         self.list_of_scenarios = [self.perfect["name"],
-                                  self.cluster_relevant["name"],
                                   self.community_relevant["name"],
                                   self.community_relevant_heterophilic["name"],
+                                  self.cluster_relevant["name"],
                                   self.non_seperated_cluster_relevant["name"],
                                   self.noise["name"]
                                   ]

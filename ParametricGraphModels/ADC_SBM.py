@@ -262,19 +262,33 @@ class ADC_SBM:
         df = pd.DataFrame(counter)
         return df
 
+    # def simple_edge_homophily(self):
+    #     G = self.Nx
+    #     n = self.n_nodes
+    #     total_neighbors = np.array([tpl[1] for tpl in list(G.degree())])
+    #
+    #     same_label_neighbors = np.zeros(n, dtype=int)
+    #     labels = np.array(self.y)
+    #
+    #     for node in range(n):
+    #         neighbors = list(G.neighbors(node))
+    #         # total_neighbors[node] = len(neighbors)
+    #         same_label_neighbors[node] = sum(labels[neighbor] == labels[node] for neighbor in neighbors)
+    #     return sum(same_label_neighbors)/sum(total_neighbors)
+
     def simple_edge_homophily(self):
         G = self.Nx
-        n = self.n_nodes
-        total_neighbors = np.array([tpl[1] for tpl in list(G.degree())])
-
-        same_label_neighbors = np.zeros(n, dtype=int)
         labels = np.array(self.y)
+        total_neighbors = np.array([degree for _, degree in G.degree()])
 
-        for node in range(n):
-            neighbors = list(G.neighbors(node))
-            # total_neighbors[node] = len(neighbors)
-            same_label_neighbors[node] = sum(labels[neighbor] == labels[node] for neighbor in neighbors)
-        return sum(same_label_neighbors)/sum(total_neighbors)
+        same_label_neighbors = np.zeros(self.n_nodes, dtype=int)
+
+        neighbors_list = [list(G.neighbors(node)) for node in range(self.n_nodes)]
+
+        for node, neighbors in enumerate(neighbors_list):
+            same_label_neighbors[node] = np.sum(labels[neighbors] == labels[node])
+
+        return np.sum(same_label_neighbors) / np.sum(total_neighbors)
 
     def edge_homophily(self):
         """
