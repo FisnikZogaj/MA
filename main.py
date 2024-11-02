@@ -3,14 +3,13 @@ import time
 import multiprocessing as mp
 from datetime import datetime
 import os
-#from config import Sparse as Scenarios
-#from config import Seperable as Scenarios
 from config import Scenarios
 
 
 fail_count = 0
 # base = r"C:\Users\zogaj\PycharmProjects\MA\ExperimentLogs"  # my machine
 base = r"/home/zogaj/MA/ExperimentLogs"  # Linux Server
+#base = r"/home/_______/MA/ExperimentLogs"  # Linux Server
 
 def run_job(config: dict, architecture: str, seed: int, timestamp: str):
     """
@@ -25,6 +24,8 @@ def run_job(config: dict, architecture: str, seed: int, timestamp: str):
 
     #python = r'C:\Users\zogaj\PycharmProjects\MA\venv\Scripts\python.exe' # my machine
     python = r'/home/zogaj/MA/genv/bin/python'  # Linux server
+    # python = r'/home/_____/MA/venv/bin/python'
+
     config_str = str(config)  # Convert dictionary to string for argparse
     command = [
         python, 'train.py',  # The script to run on the version of python specified
@@ -34,7 +35,7 @@ def run_job(config: dict, architecture: str, seed: int, timestamp: str):
         '--timestamp', timestamp,
     ]
     process = subprocess.Popen(command)
-    process.wait()  # Wait for the process to complete!
+    process.wait()
     return process.returncode
 
 # Function to run job and handle exceptions
@@ -54,7 +55,7 @@ def run_job_safe(args, counter, lock, total_num_of_jobs):
 if __name__ == '__main__':
     start_time = time.time()
     # Note: range determines the number of Monte-Carlo runs
-    seeds = list(range(31, 101))  # [1,2,...,n-1]
+    seeds = list(range(1, 101))  # [1,2,...,n-1]
     arguments = Scenarios()
 
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S").translate(str.maketrans({" ": "-", ":": "-"}))

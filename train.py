@@ -66,7 +66,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
                             hidden_channels=hc1,
                             output_channels=num_targets)
 
-    else:  # architecture == "XGBoost"
+    else:  
         pass
 
     criterion = torch.nn.CrossEntropyLoss()
@@ -127,12 +127,11 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
         iteration_times = np.zeros(n_epochs)
         early_stop = None
 
-        # Initialize early stopping variables
         best_val_acc = -np.inf
         epochs_without_improvement = 0
         pseudo_break = False
 
-        for epoch in tqdm(range(1, n_epochs)): # [1, ..., 100] - len() -> 100
+        for epoch in tqdm(range(1, n_epochs)):  # [1, ..., 100] - len() -> 100
 
             start_time = time.time()
             loss = train(data)
@@ -143,7 +142,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
             val_acc_track[epoch-1] = val_acc
             loss_track[epoch-1] = loss
 
-            # Check if the current epoch has the best validation accuracy
+
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
                 epochs_without_improvement = 0
@@ -154,7 +153,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
                 early_stop = epoch
                 pseudo_break = True  # won't trigger if-clause anymore
                 test_accuracy = test(data, data.test_mask)
-                # break
+
 
         if early_stop is None:
             # Training was never aborted due to early stopping, thus it stays None.
@@ -194,6 +193,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
 
     GraphCharacteristics = {
         "h_hat": g.edge_homophily(),
+        "h": g.simple_edge_homophily(),
         "class_balance": np.bincount(g.y),
         "wilks_lambda": g.manova_x()
     }

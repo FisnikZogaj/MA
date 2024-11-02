@@ -8,7 +8,6 @@ from torch.nn import Linear
 # ----------------------------- GCN --------------------------------
 # ------------------------------------------------------------------
 
-
 class TwoLayerGCN(torch.nn.Module):
     def __init__(self, hidden_channels, input_channels, output_channels):
         super().__init__()
@@ -87,6 +86,8 @@ class TwoLayerMLP(torch.nn.Module):
 
 
 if __name__ == '__main__':
+
+    # Just for testing
 
     from ParametricGraphModels.ADC_SBM import *
     from config import Scenarios

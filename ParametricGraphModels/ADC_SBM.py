@@ -26,6 +26,7 @@ def CramersV(labels_1, labels_2):
     r, k = contingency_table.shape
 
     return np.sqrt(phi2 / min(k - 1, r - 1))
+
 class ADC_SBM:
 
     def __init__(self, community_sizes: list, B: np.array):
@@ -217,7 +218,7 @@ class ADC_SBM:
                 np.concatenate(
                     (np.repeat("None", self.n_nodes-sum(mv)),
                      np.repeat('train', mv[0]),
-                     np.repeat('test', mv[1]),
+                     np.repeat('test', mv[1]),  # Maybe swap ...
                      np.repeat('val', mv[2]))
                 )
             )
@@ -262,19 +263,6 @@ class ADC_SBM:
         df = pd.DataFrame(counter)
         return df
 
-    # def simple_edge_homophily(self):
-    #     G = self.Nx
-    #     n = self.n_nodes
-    #     total_neighbors = np.array([tpl[1] for tpl in list(G.degree())])
-    #
-    #     same_label_neighbors = np.zeros(n, dtype=int)
-    #     labels = np.array(self.y)
-    #
-    #     for node in range(n):
-    #         neighbors = list(G.neighbors(node))
-    #         # total_neighbors[node] = len(neighbors)
-    #         same_label_neighbors[node] = sum(labels[neighbor] == labels[node] for neighbor in neighbors)
-    #     return sum(same_label_neighbors)/sum(total_neighbors)
 
     def simple_edge_homophily(self):
         G = self.Nx
@@ -490,6 +478,7 @@ def from_config(config: dict, rs=26):
     B = getB(m=b_communities, b_range=b_com_r, w_range=w_com_r)  # get Connection Matrix
     g = ADC_SBM(community_sizes=community_sizes, B=B)  # instantiate class
 
+    #  No degree corrections applied for simulations.
     # g.correct_degree(alpha=alpha, beta=beta, lmbd=lmbd, distribution="exp")
     g.gen_graph()
 

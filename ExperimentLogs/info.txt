@@ -1,7 +1,0 @@
-Each subfolder represents a generated graph, where
-
- - all the params for generation
- - the graph class as a pkl object
- - plots
-
-is/are stored.
