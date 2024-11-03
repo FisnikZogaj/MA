@@ -168,7 +168,7 @@ def run_experiment(graph_config: dict, architecture: str, seed: int, ts: str):
     optimizer = torch.optim.Adam(model.parameters(), lr=lrn_rt, weight_decay=wgth_dcy)
 
     loss_track, val_acc_track, test_accuracy, final_epoch, epoch_times = (
-        full_training_early_stop(data=g.DataObject, n_epochs=151, patience=10))
+        full_training_early_stop(data=g.DataObject, n_epochs=151, patience=10))  # range(151) -> 150 actual runs!
 
     # ---------------- Save all results -----------------
 

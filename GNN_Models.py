@@ -2,7 +2,6 @@ import torch
 from torch_geometric.nn import GATConv, SAGEConv, GCNConv
 import torch.nn.functional as F
 from torch.nn import Linear
-# Note: softmax at the end of each forward pass not necessary because CLE expects raw scores.
 
 # ------------------------------------------------------------------
 # ----------------------------- GCN --------------------------------

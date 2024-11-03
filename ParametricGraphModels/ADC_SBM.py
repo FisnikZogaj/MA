@@ -80,7 +80,7 @@ class ADC_SBM:
         :param distribution: whether to draw from a beta or an exp distribution
         :return: Vector of degree corrections for every node.
 
-        This is fixed for all Graphs and will not be changed within the Monte Carlo Experiments.
+        Implemented, but not used within the Monte Carlo Experiments.
         """
         # theta with a distribution between 0 and 1
         assert distribution in ["exp", "beta"], "Distribution must be in [exp, beta]"
@@ -163,17 +163,6 @@ class ADC_SBM:
         self.m = data.shape[1]
 
 
-    def reduce_dim_x(self, rs=26):
-        """
-        Used to be able to plot graphs with more than 2 features.
-        :param rs: random state
-        """
-        tsne = TSNE(n_components=2, random_state=rs)
-        self.x_tsne = tsne.fit_transform(self.x)
-
-        return self.cluster_labels, self.x_tsne
-
-
     def set_y(self, weights: np.array, eps:float=1):
         """
         :param task: ["regression","binary","multiclass"]
@@ -238,6 +227,7 @@ class ADC_SBM:
                                val_mask=self.val_mask)  # # boolean validation_mask
 
 
+    # -------------------- Compute metrics for Graph characteristics -------------------------------
 
     def target_edge_counter(self):
         """
@@ -362,6 +352,16 @@ class ADC_SBM:
 
     # ----------------- Plotting Methods -----------------------
 
+    def reduce_dim_x(self, rs=26):
+        """
+        Used to be able to plot graphs with more than 2 features.
+        :param rs: random state
+        """
+        tsne = TSNE(n_components=2, random_state=rs)
+        self.x_tsne = tsne.fit_transform(self.x)
+
+        return self.cluster_labels, self.x_tsne
+
     def rich_plot_graph(self, fig_size: tuple, ns: int = 20, wdth: float = .3, alph: float = .1):
         """
         Plot the Graph, with communities/target-class up to 5 categories.
@@ -425,8 +425,7 @@ def getB(m: int, b_range: tuple, w_range: tuple, rs: int = False):
 
 def getW(m_targets, n_communities, k_clusters, w_x: float, w_com: float):
     """
-    W (Omega) are the weights that are used to determine the importance of Cluster and Community
-    Newer Version, that doesn't rely on random chance too much.
+    W (Omega) are the weights that are used to determine the importance of Cluster and Community.
     Fills the diagonal by adding number to it.
     """
 
